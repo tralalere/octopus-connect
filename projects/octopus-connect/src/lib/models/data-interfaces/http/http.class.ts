@@ -82,6 +82,8 @@ export class Http extends ExternalInterface {
             this.dataStore.user = JSON.parse(localStorage.getItem(`${this.interfaceName}_currentUser`));
             this.setToken(JSON.parse(localStorage.getItem(`${this.interfaceName}_accessToken`))).subscribe((data: EntityDataSet) => {
                 value.next(data);
+            }, (err) => {
+                value.error(err);
             });
         } else if (expire && expire < Date.now()) {
             value.error(null);
@@ -586,6 +588,8 @@ export class Http extends ExternalInterface {
                     let userData: Object = JSON.parse(request.responseText)['data'][0];
                     subject.next(userData);
                     this.setMe(userData, complete);
+                } if (request.status === 401) {
+                    subject.error(request.status);
                 } else {
                     if (errorHandler) {
                         this.sendError(request.status, request.statusText, errorHandler, {

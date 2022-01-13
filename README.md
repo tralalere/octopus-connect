@@ -31,7 +31,7 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 ## Publish
 ```
-ng build octopus-connect --prod
+ng build --configuration production
 cd dist/octopus-connect
 npm publish
 ```  

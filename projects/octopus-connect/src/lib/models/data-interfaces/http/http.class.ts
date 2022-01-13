@@ -287,18 +287,23 @@ export class Http extends ExternalInterface {
 
         let filterKeys: string[] = Object.keys(filter);
 
-        if (filterKeys.length > 0) {
-            url += '?';
-        }
 
-        filterKeys.forEach((key: string, index: number) => {
-            let val: any = filter[key];
-            url += `filter[${key}]=${val}`;
-
-            if (index < filterKeys.length - 1) {
-                url += '&';
+        if(filterKeys.length === 1 && filterKeys[0] === 'id'){
+            url += '/' + filter['id'];
+        } else {
+            if(filterKeys.length > 0) {
+                url += '?';
             }
-        });
+
+            filterKeys.forEach((key: string, index: number) => {
+                let val: any = filter[key];
+                url += `filter[${key}]=${val}`;
+
+                if (index < filterKeys.length - 1) {
+                    url += '&';
+                }
+            });
+        }
 
         request.open('GET', url, true);
 

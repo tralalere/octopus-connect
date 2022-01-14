@@ -498,6 +498,10 @@ export class Http extends ExternalInterface {
         localStorage.removeItem(`${this.interfaceName}_accessToken`);
         localStorage.removeItem(`${this.interfaceName}_expires_in`);
         localStorage.removeItem(`${this.interfaceName}_refreshToken`);
+        if (this.headers.hasOwnProperty('access-token')) {
+            delete this.headers['access-token'];
+        }
+
         this.dataStore.user = null;
 
         return new BehaviorSubject(true);

@@ -50,4 +50,9 @@ export interface EndpointConfig {
      * Is automatic refresh enabled
      */
     refreshEnabled?: boolean;
+
+    /**
+     * If true, no authentication data need on this endpoint
+     */
+    authenticationFree?: boolean;
 }

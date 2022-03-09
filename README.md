@@ -17,6 +17,17 @@ Run `ng build` to build the project. The build artifacts will be stored in the `
 If you want to use it with the `npm link`, the parent project cannot compile this package with the `ngcc` command in `postinstall` script.
 So, go to `projects/octopus-connect/tsconfig.lib.json` find the key `enableIvy` and set it to `true` but don't forget to reset to false before publishing !
 
+Either you can use `npm run dev` for active a watcher. It will build the for each update. After that, copy the path of the `dist/octopus-connect` folder and paste it into the `package.json` file of the parent project :
+```json
+// package.json
+// ...
+"dependencies": {
+    // ...
+    "octopus-connect": "path-to\\dist\\octopus-connect",
+    // ...
+}
+```
+
 ## Running unit tests
 
 Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
@@ -31,7 +42,7 @@ To get more help on the Angular CLI use `ng help` or go check out the [Angular C
 
 ## Publish
 ```
-ng build octopus-connect --prod
+ng build --configuration production
 cd dist/octopus-connect
 npm publish
 ```  

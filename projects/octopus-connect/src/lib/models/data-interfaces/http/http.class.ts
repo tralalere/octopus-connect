@@ -2,7 +2,7 @@ import {map} from 'rxjs/operators';
 import {ExternalInterface} from '../abstract-external-interface.class';
 import {DataConnector} from '../../data-connector.class';
 import {HttpConfiguration} from './http-configuration.interface';
-import {BehaviorSubject, Observable, ReplaySubject, combineLatest} from 'rxjs';
+import {BehaviorSubject, combineLatest, Observable, ReplaySubject} from 'rxjs';
 import {CollectionDataSet, EntityDataSet} from '../../types';
 import {EndpointConfig} from '../../endpoint-config.interface';
 import {CollectionOptionsInterface} from '../../collection-options.interface';
@@ -25,8 +25,8 @@ export class Http extends ExternalInterface {
 
     /**
      * Creates the http interface
-     * @param {HttpConfiguration} configuration Configuration object
-     * @param {DataConnector} connector Reference to the connector
+     * @param configuration Configuration object
+     * @param connector Reference to the connector
      */
     constructor(
         private configuration: HttpConfiguration,
@@ -89,18 +89,25 @@ export class Http extends ExternalInterface {
      * Add headers to the request
      * @param request A xhr request
      * @param type the endpoint use to find a specific header configuration about the endpoint
+     * @param method used to determine if we can do a preflight proof request
      */
-    private addHeaders(request: XMLHttpRequest, type: string) {
+    private addHeaders(request: XMLHttpRequest, type: string, method: 'GET' | 'POST' | 'PATCH' | 'DELETE') {
         const endPointConf: string | EndpointConfig = this.connector.getEndpointConfiguration(type);
-
-        let accessTokenIsForbidden = false;
-        if (!!endPointConf && typeof endPointConf !== 'string') {
-            accessTokenIsForbidden = !!endPointConf.authenticationFree;
-        }
+        const isAuthFree = !!endPointConf && typeof endPointConf !== 'string' && !!endPointConf.authenticationFree;
+        const availableForPreflightProofContentType = ['application/x-www-form-urlencoded', 'multipart/form-data', 'text/plain'];
+        const isShouldBePreflightProof = isAuthFree && method === 'GET';
+        const isItPreflightProofHeader = (headerValue: string) => availableForPreflightProofContentType.includes(headerValue);
 
         for (const headerName in this.headers) {
             if (this.headers.hasOwnProperty(headerName)) {
-                if ( (accessTokenIsForbidden && headerName === 'access-token') === false) {
+                if (headerName.toLocaleLowerCase() === 'access-token' && isAuthFree) {
+                    // do nothing to avoid access-token header
+                } else if (headerName.toLocaleLowerCase() === 'content-type'
+                    && isShouldBePreflightProof
+                    && isItPreflightProofHeader(this.headers[headerName]) === false) {
+                    // replace the content-type to a preflight proof content-type
+                    request.setRequestHeader('content-type', 'text/plain');
+                } else {
                     request.setRequestHeader(headerName, this.headers[headerName]);
                 }
             }
@@ -133,10 +140,10 @@ export class Http extends ExternalInterface {
 
     /**
      * Load entity in http service
-     * @param {string} type Endpoint name
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the data
+     * @param type Endpoint name
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the data
      */
     loadEntity(type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
         const request: XMLHttpRequest = new XMLHttpRequest();
@@ -145,7 +152,7 @@ export class Http extends ExternalInterface {
 
         const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'GET');
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -251,7 +258,7 @@ export class Http extends ExternalInterface {
 
         request.open('GET', url, true);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'GET');
 
         const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
 
@@ -306,7 +313,7 @@ export class Http extends ExternalInterface {
 
         request.open('GET', url, true);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'GET');
 
         const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
 
@@ -329,18 +336,18 @@ export class Http extends ExternalInterface {
 
     /**
      * Save entity to the http service
-     * @param {EntityDataSet} entity Entity data to save
-     * @param {string} type Endpoint name
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the entity data
+     * @param entity Entity data to save
+     * @param type Endpoint name
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the entity data
      */
     saveEntity(entity: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}/${id}`;
         request.open('PATCH', url, true);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'PATCH');
 
         const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
 
@@ -363,17 +370,17 @@ export class Http extends ExternalInterface {
 
     /**
      * Create entity in http service
-     * @param {string} type Endpoint name
-     * @param {EntityDataSet} data Data used to create the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the entity data
+     * @param type Endpoint name
+     * @param data Data used to create the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the entity data
      */
     createEntity(type: string, data: EntityDataSet, errorHandler: Function = null): Observable<EntityDataSet> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}`;
         request.open('POST', url, true);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'POST');
 
         const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
 
@@ -396,17 +403,17 @@ export class Http extends ExternalInterface {
 
     /**
      * Delete entity from http service
-     * @param {string} type Endpoint type
-     * @param {number} id Entity id
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>} True if deletion success
+     * @param type Endpoint type
+     * @param id Entity id
+     * @param errorHandler Function used to handle errors
+     * @returns True if deletion success
      */
     deleteEntity(type: string, id: number, errorHandler: Function = null): Observable<boolean> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}/${id}`;
         request.open('DELETE', url, true);
 
-        this.addHeaders(request, type);
+        this.addHeaders(request, type, 'DELETE');
 
         const subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
 
@@ -429,10 +436,10 @@ export class Http extends ExternalInterface {
 
     /**
      * Authenticate in service
-     * @param {string} login User login
-     * @param {string} password User password
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>} True if authentication success
+     * @param login User login
+     * @param password User password
+     * @param errorHandler Function used to handle errors
+     * @returns True if authentication success
      */
     authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet> {
         const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
@@ -516,20 +523,11 @@ export class Http extends ExternalInterface {
         }
     }
 
-    /**
-     *
-     * @param {number} expire
-     */
     private setExpireDate(expire: number) {
         const date: number = Date.now();
         localStorage.setItem(`${this.interfaceName}_expires_in`, JSON.stringify(date + (expire * 1000)));
     }
 
-    /**
-     *
-     * @param {string} refreshToken
-     * @param {Function} errorHandler
-     */
     private refreshToken(refreshToken: string, errorHandler: Function): Observable<Object> {
 
         const subject: ReplaySubject<Object> = new ReplaySubject<Object>(1);
@@ -560,21 +558,11 @@ export class Http extends ExternalInterface {
         return subject;
     }
 
-    /**
-     *
-     * @param {string} refreshToken
-     */
     private setRefreshToken(refreshToken: string) {
         localStorage.setItem(`${this.interfaceName}_refreshToken`, JSON.stringify(refreshToken));
     }
 
 
-    /**
-     *
-     * @param {boolean} complete
-     * @param {Function} errorHandler
-     * @returns {Observable<EntityDataSet>}
-     */
     getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet> {
 
         const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
@@ -583,15 +571,16 @@ export class Http extends ExternalInterface {
 
         const url = `${this.configuration.apiUrl as string}api/users/me`;
         request.open('GET', url, true);
-        this.addHeaders(request, 'users/me');
+        this.addHeaders(request, 'users/me', 'GET');
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    const userData: Object = JSON.parse(request.responseText).data[0];
+                    const userData: any = JSON.parse(request.responseText).data[0];
                     subject.next(userData);
                     this.setMe(userData, complete);
-                } if (request.status === 401) {
+                }
+                if (request.status === 401) {
                     subject.error(request.status);
                 } else {
                     if (errorHandler) {
@@ -610,11 +599,6 @@ export class Http extends ExternalInterface {
         return subject;
     }
 
-    /**
-     *
-     * @param {EntityDataSet} userData
-     * @param {boolean} complete
-     */
     setMe(userData: EntityDataSet, complete: boolean = true) {
 
         if (complete) {
@@ -628,8 +612,8 @@ export class Http extends ExternalInterface {
 
     /**
      * Extract entity data from raw data
-     * @param {string} responseText Response text from server
-     * @returns {EntityDataSet} Entity data
+     * @param responseText Response text from server
+     * @returns Entity data
      */
     protected extractEntity(responseText: string): EntityDataSet {
         const data: any = JSON.parse(responseText);
@@ -680,8 +664,6 @@ export class Http extends ExternalInterface {
     /**
      * Callback appelé lors du déclanchement d'un event de type StorageEvent. Cela n'a lieu que si le localstorage a été modifié depuis une autre page.
      * Dans ce cas, nous controllons s'il s'agit d'une déconnexion pour notifier ensuite les abonnées a OnUnexpectedLogout
-     * @param event
-     * @return
      */
     private OnUnexpectedStorageChange(event: StorageEvent) {
         if (

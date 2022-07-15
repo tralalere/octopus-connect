@@ -23,7 +23,8 @@
         "dist/octopus-connect/octopus-connect",
         "dist/octopus-connect"
       ]
-    }
+    },
+    "types": ["node"]
   },
   "angularCompilerOptions": {
     "fullTemplateTypeCheck": true,

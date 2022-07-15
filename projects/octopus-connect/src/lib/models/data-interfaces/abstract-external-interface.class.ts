@@ -9,7 +9,7 @@ import {CollectionPaginator} from '../collection-paginator.class';
  */
 export abstract class ExternalInterface {
 
-    authenticated: Observable<EntityDataSet>;
+    get authenticated(): Observable<EntityDataSet> {return undefined}
     public unexpectedLogoutSubject: Subject<null> = new Subject<null>();
 
     /**

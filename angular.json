@@ -28,18 +28,6 @@
             "tsConfig": "projects/octopus-connect/tsconfig.spec.json",
             "karmaConfig": "projects/octopus-connect/karma.conf.js"
           }
-        },
-        "lint": {
-          "builder": "@angular-devkit/build-angular:tslint",
-          "options": {
-            "tsConfig": [
-              "projects/octopus-connect/tsconfig.lib.json",
-              "projects/octopus-connect/tsconfig.spec.json"
-            ],
-            "exclude": [
-              "**/node_modules/**"
-            ]
-          }
         }
       }
     }},

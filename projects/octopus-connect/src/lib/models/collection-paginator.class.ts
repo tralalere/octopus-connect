@@ -83,13 +83,16 @@ export class CollectionPaginator {
         this.reload();
     }
 
-    public updateCount(count: number): void {
-        this.count = count;
+    public updateCount(count: number): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+                this.count = count;
 
-        if (this._range > 0) {
-            this.hasPreviousPage = this._page > 1;
-            this.hasNextPage = Math.ceil(count / this._range) > this._page;
-        }
+                if (this._range > 0) {
+                    this.hasPreviousPage = this._page > 1;
+                    this.hasNextPage = Math.ceil(count / this._range) > this._page;
+                }
+                resolve();
+        });
     }
 
     public reload(): void {

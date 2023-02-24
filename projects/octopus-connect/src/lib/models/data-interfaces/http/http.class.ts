@@ -265,7 +265,12 @@ export class Http extends ExternalInterface {
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    subject.next(this.extractCollection(request.responseText, paginator));
+                    const promise = this.extractCollection(request.responseText, paginator);
+                    promise.then((rest: CollectionDataSet) => {
+                        subject.next(rest);
+                    }).catch((error: any) => {
+                        console.error(error);
+                    });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
                         response: JSON.parse(request.responseText)
@@ -320,7 +325,12 @@ export class Http extends ExternalInterface {
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    subject.next(this.extractCollection(request.responseText));
+                    const promise = this.extractCollection(request.responseText);
+                    promise.then((rest: CollectionDataSet) => {
+                        subject.next(rest);
+                    }).catch((error: any) => {
+                        console.error(error);
+                    });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
                         response: JSON.parse(request.responseText)
@@ -640,26 +650,24 @@ export class Http extends ExternalInterface {
      * @param {string} responseText Response text from server
      * @returns {CollectionDataSet} Collection data
      */
-    protected extractCollection(responseText: string, paginator: CollectionPaginator = null): CollectionDataSet {
+    protected extractCollection(responseText: string, paginator: CollectionPaginator = null): Promise<CollectionDataSet> {
         const data: any = JSON.parse(responseText);
-
-        if (paginator) {
-            paginator.updateCount(+data.count);
-        }
-
-
         const collectionData: CollectionDataSet = {};
 
         data.data.forEach((entityData: EntityDataSet) => {
-
-            // ?????
-            entityData.id = entityData.id;
-
             collectionData['_' + entityData.id] = entityData;
         });
 
-        return collectionData;
+        if (paginator) {
+            return paginator.updateCount(+data.count).then(() => {
+                return collectionData;
+            });
+        } else {
+            return Promise.resolve(collectionData);
+        }
     }
+
+
 
     /**
      * Callback appelé lors du déclanchement d'un event de type StorageEvent. Cela n'a lieu que si le localstorage a été modifié depuis une autre page.

@@ -1,6 +1,6 @@
 {
     "name": "octopus-connect",
-    "version": "14.2.7",
+    "version": "14.2.8",
     "peerDependencies": {
         "@angular/common": "^14.2.6",
         "@angular/core": "^14.2.6",

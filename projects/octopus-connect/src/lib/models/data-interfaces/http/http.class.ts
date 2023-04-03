@@ -574,7 +574,6 @@ export class Http extends ExternalInterface {
 
 
     getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet> {
-
         const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
 
         const request: XMLHttpRequest = new XMLHttpRequest();
@@ -589,8 +588,7 @@ export class Http extends ExternalInterface {
                     const userData: any = JSON.parse(request.responseText).data[0];
                     subject.next(userData);
                     this.setMe(userData, complete);
-                }
-                if (request.status === 401) {
+                } else if (request.status === 401) {
                     subject.error(request.status);
                 } else {
                     if (errorHandler) {

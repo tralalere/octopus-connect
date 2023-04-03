@@ -1,6 +1,6 @@
 # OctopusConnect
 
-This library was generated with [Angular CLI](https://github.com/angular/angular-cli) version 14.0.7.
+This library is compatible with [Angular CLI](https://github.com/angular/angular-cli) version 14.
 
 ## Code scaffolding
 
@@ -23,9 +23,15 @@ Run `ng test octopus-connect` to execute the unit tests via [Karma](https://karm
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
 
-## publish
+## Publish
+Don't forget to update the version in :
+- `package.json`
+- `projects/octopus-connect/package.json`
+- `readme.md`
+- `projects/octopus-connect/readme.md`
+
 ```
-ng build octopus-connect --prod
+ng build --configuration production
 cd dist/octopus-connect
 npm publish
-```
+```  

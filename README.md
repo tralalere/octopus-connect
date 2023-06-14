@@ -1,6 +1,6 @@
 # OctopusConnect
 
-This project is compatible with [Angular CLI](https://github.com/angular/angular-cli) version 14
+This project is compatible with [Angular CLI](https://github.com/angular/angular-cli) version 16
 
 ## Development server
 

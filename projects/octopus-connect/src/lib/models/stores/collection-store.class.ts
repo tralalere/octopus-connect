@@ -98,7 +98,7 @@ export class CollectionStore {
         const filterKeys: string[] = Object.keys(this.collectionObservables);
 
         filterKeys.forEach((hash: string) => {
-            if (this.filterMatching(filter, this.filters[hash])) {
+            if (this.filters[hash] && this.collections[hash] && this.filterMatching(filter, this.filters[hash])) {
                 this.collectionObservables[hash].next(this.collections[hash]);
             }
         });
@@ -166,6 +166,10 @@ export class CollectionStore {
      * @returns {boolean}
      */
     filterMatching(filter1: FilterData = {}, filter2: FilterData = {}): boolean {
+
+        if (!filter1 || !filter2) {
+            return false;
+        }
 
         // must have the same keys
         const filter1Keys: string[] = Object.keys(filter1);

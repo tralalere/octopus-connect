@@ -252,11 +252,14 @@ export class DataConnector {
      * Get the observable associated to the collection from the store
      * @param type Endpoint name
      * @param filter Filter object
-     * @param useCache
+     * @param useCache Store the result in cache or retrieve it from cache
+     * @param createIfNotExisted Create the observable if not existed
      * @returns The observable associated to the collection
      */
-    private getCollectionObservableInStore(type: string, filter: FilterData, useCache = false): Observable<DataCollection> {
-        if (this.collectionsLiveStore[type]) {
+    private getCollectionObservableInStore(type: string, filter: FilterData, useCache = false, createIfNotExisted = true): Observable<DataCollection> {
+        const isExisted: boolean = this.collectionsLiveStore[type] && this.collectionsLiveStore[type].isInStore(filter);
+
+        if (isExisted || createIfNotExisted) {
             return this.collectionsLiveStore[type].getCollectionSubject(filter, useCache);
         }
 

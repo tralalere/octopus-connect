@@ -100,7 +100,7 @@ export class Http extends ExternalInterface {
 
         for (const headerName in this.headers) {
             if (this.headers.hasOwnProperty(headerName)) {
-                if (headerName.toLocaleLowerCase() === 'access-token' && isAuthFree) {
+                if (headerName.toLocaleLowerCase() === 'authorization' && isAuthFree) {
                     // do nothing to avoid access-token header
                 } else if (headerName.toLocaleLowerCase() === 'content-type'
                     && isShouldBePreflightProof
@@ -456,10 +456,10 @@ export class Http extends ExternalInterface {
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
-        const url = `${this.configuration.apiUrl as string}api/login-token`;
-        request.open('GET', url, true);
+        const url = `${this.configuration.apiUrl as string}oauth/token`;
+        request.open('POST', url, true);
 
-        request.setRequestHeader('Authorization', 'Basic ' + btoa(login.trim() + ':' + password));
+        request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
 
         const observables: Observable<any>[] = [];
 
@@ -494,7 +494,15 @@ export class Http extends ExternalInterface {
             }
         };
 
-        request.send();
+        const body = new URLSearchParams({
+            'grant_type': 'password',
+            'username': login.trim(),
+            'password': password,
+            'client_id': 'front', // Assurez-vous que ceci correspond à votre client_id
+            'client_secret': 'tralalere' // Remplacez par votre vrai client_secret
+        });
+
+        request.send(body.toString());
 
         return subject;
     }
@@ -514,8 +522,8 @@ export class Http extends ExternalInterface {
         localStorage.removeItem(`${this.interfaceName}_accessToken`);
         localStorage.removeItem(`${this.interfaceName}_expires_in`);
         localStorage.removeItem(`${this.interfaceName}_refreshToken`);
-        if (this.headers.hasOwnProperty('access-token')) {
-            delete this.headers['access-token'];
+        if (this.headers.hasOwnProperty('Authorization')) {
+            delete this.headers['Authorization'];
         }
 
         this.dataStore.user = null;
@@ -527,7 +535,7 @@ export class Http extends ExternalInterface {
     private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet> {
         if (accessToken && accessToken != '') {
             localStorage.setItem(`${this.interfaceName}_accessToken`, JSON.stringify(accessToken));
-            this.headers['access-token'] = accessToken;
+            this.headers['Authorization'] = 'Bearer ' + accessToken;
 
             return this.getMe(true, errorHandler);
         }
@@ -677,6 +685,7 @@ export class Http extends ExternalInterface {
             && event.newValue === null
             && event.oldValue !== null
         ) {
+            // @ts-ignore
             this.unexpectedLogoutSubject.next();
         }
     }

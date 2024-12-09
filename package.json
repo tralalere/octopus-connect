@@ -21,14 +21,14 @@
     "e2e": "ng e2e"
   },
   "dependencies": {
-    "@angular/cli": "^16.1.0",
-    "@angular/common": "^16.1.0",
-    "@angular/compiler": "^16.1.0",
-    "@angular/core": "^16.1.0",
-    "@angular/forms": "^16.1.0",
-    "@angular/platform-browser": "^16.1.0",
-    "@angular/platform-browser-dynamic": "^16.1.0",
-    "@angular/router": "^16.1.0",
+    "@angular/cli": "^17.3.11",
+    "@angular/common": "^17.3.12",
+    "@angular/compiler": "^17.3.12",
+    "@angular/core": "^17.3.12",
+    "@angular/forms": "^17.3.12",
+    "@angular/platform-browser": "^17.3.12",
+    "@angular/platform-browser-dynamic": "^17.3.12",
+    "@angular/router": "^17.3.12",
     "biguint-format": "^1.0.0",
     "buffer": "^5.1.0",
     "flake-idgen": "^1.1.0",
@@ -39,14 +39,14 @@
     "socket.io-client": "^2.4.0",
     "tslib": "^2.0.0",
     "uuid": "^3.2.1",
-    "zone.js": "~0.13.1"
+    "zone.js": "~0.14.10"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^16.1.0",
-    "@angular/animations": "^16.1.0",
-    "@angular/compiler-cli": "^16.1.0",
-    "@angular/language-service": "^16.1.0",
-    "@angular/platform-server": "^16.1.0",
+    "@angular-devkit/build-angular": "^17.3.11",
+    "@angular/animations": "^17.3.12",
+    "@angular/compiler-cli": "^17.3.12",
+    "@angular/language-service": "^17.3.12",
+    "@angular/platform-server": "^17.3.12",
     "@types/flake-idgen": "^0.1.30",
     "@types/jasmine": "~3.8.0",
     "@types/jasminewd2": "~2.0.3",
@@ -61,7 +61,7 @@
     "karma-coverage-istanbul-reporter": "~3.0.2",
     "karma-jasmine": "~4.0.0",
     "karma-jasmine-html-reporter": "^1.7.0",
-    "ng-packagr": "^16.1.0",
+    "ng-packagr": "^17.3.0",
     "protractor": "~7.0.0",
     "rimraf": "^2.6.2",
     "rxjs": "^6.6.7",
@@ -70,7 +70,7 @@
     "ts-node": "~8.3.0",
     "tslint": "~6.1.0",
     "typedoc": "^0.10.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.5"
   },
   "peerDependencies": {
     "object-hash": "^2.1.1"

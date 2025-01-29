@@ -456,18 +456,22 @@ export class Http extends ExternalInterface {
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
-        const url = `${this.configuration.apiUrl as string}oauth/token`;
-        request.open('POST', url, true);
+        const url = `${this.configuration.apiUrl as string}jwt/token`;
+        request.open('GET', url, true);
 
-        request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        request.setRequestHeader('Authorization', 'Basic ' + btoa(login.trim() + ':' + password));
 
         const observables: Observable<any>[] = [];
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    const loginData: any = JSON.parse(request.responseText);
-                    const expire: number = +loginData.expires_in - 3600;
+                    let loginData: any = JSON.parse(request.responseText);
+                    loginData.access_token = loginData.token;
+                    loginData.refresh_token = loginData.token;
+                    const tokenInfo = atob(loginData.token.split('.')[1])
+                    const decodedToken = JSON.parse(tokenInfo);
+                    const expire = decodedToken.exp - Math.floor(Date.now() / 1000);
                     if (expire < 3600) {
                         if (localStorage.getItem(`${this.interfaceName}_accessToken`)) {
                             observables.push(this.setToken(loginData.access_token, errorHandler));
@@ -494,15 +498,7 @@ export class Http extends ExternalInterface {
             }
         };
 
-        const body = new URLSearchParams({
-            'grant_type': 'password',
-            'username': login.trim(),
-            'password': password,
-            'client_id': 'front', // Assurez-vous que ceci correspond à votre client_id
-            'client_secret': 'tralalere' // Remplacez par votre vrai client_secret
-        });
-
-        request.send(body.toString());
+        request.send();
 
         return subject;
     }
@@ -552,15 +548,22 @@ export class Http extends ExternalInterface {
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
-        const url = `${this.configuration.apiUrl as string}api/refresh-token/${refreshToken}`;
+        const url = `${this.configuration.apiUrl as string}jwt/token`;
         request.open('GET', url, true);
+        request.setRequestHeader('Authorization', 'Bearer ' + refreshToken);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    const userData: any = JSON.parse(request.responseText);
+                    let userData: any = JSON.parse(request.responseText);
+                    userData.access_token = userData.token;
+                    userData.refresh_token = userData.token;
+                    const tokenInfo = atob(userData.token.split('.')[1])
+                    const decodedToken = JSON.parse(tokenInfo);
+                    const expire = decodedToken.exp - Math.floor(Date.now() / 1000);
+
                     this.setToken(userData.access_token, errorHandler);
-                    this.setExpireDate(+userData.expires_in - 3600);
+                    this.setExpireDate(+expire);
                     this.setRefreshToken(userData.refresh_token);
                     subject.next(userData);
                 } else {

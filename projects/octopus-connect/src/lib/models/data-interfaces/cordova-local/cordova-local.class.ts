@@ -9,10 +9,10 @@ declare var cordova: any;
 declare var device: any;
 declare var LocalFileSystem: any;
 
-export class CordovaLocal extends ExternalInterface {
+export class CordovaLocal<T extends { [key: string]: any }> extends ExternalInterface<T> {
 
     fileSystem: any;
-    private dataStore: CollectionDataSet = {};
+    private dataStore: CollectionDataSet<T> = {};
 
     constructor(
         private configuration: CordovaLocalConfiguration,
@@ -21,7 +21,7 @@ export class CordovaLocal extends ExternalInterface {
     ) {
         super();
 
-        //this.loadPointFromStorage("ideaswall");
+        // this.loadPointFromStorage("ideaswall");
     }
 
     private createFile(
@@ -70,7 +70,7 @@ export class CordovaLocal extends ExternalInterface {
     ) {
 
         fileEntry.file(function(file) {
-            let reader = new FileReader();
+            const reader = new FileReader();
 
             reader.onloadend = function() {
                 success(this.result);
@@ -140,8 +140,8 @@ export class CordovaLocal extends ExternalInterface {
     }
 
 
-    authenticate(): Observable<EntityDataSet> {
-        const obs = new ReplaySubject<EntityDataSet>(1);
+    authenticate(): Observable<EntityDataSet<T>> {
+        const obs = new ReplaySubject<EntityDataSet<T>>(1);
 
         /*obs.next({
             "id":"5",
@@ -162,8 +162,8 @@ export class CordovaLocal extends ExternalInterface {
         return obs;
     }
 
-    get authenticated(): Observable<EntityDataSet> {
-        const obs = new ReplaySubject<EntityDataSet>(1);
+    get authenticated(): Observable<EntityDataSet<T>> {
+        const obs = new ReplaySubject<EntityDataSet<T>>(1);
 
         /*obs.next({
             "id":"5",
@@ -254,9 +254,9 @@ export class CordovaLocal extends ExternalInterface {
 
     private getCollectionFromStore(type: string, filter: FilterData = {}, callback: Function) {
 
-        let pointName: string = type;
+        const pointName: string = type;
         this.loadPointFromStorageIfEmpty(type, () => {
-            let dataSet: CollectionDataSet = {};
+            const dataSet: CollectionDataSet<T> = {};
 
 
             let obj: Object = {};
@@ -265,16 +265,16 @@ export class CordovaLocal extends ExternalInterface {
                 this.dataStore[pointName].forEach(elem => {
                     obj[elem["id"]] = elem;
                 });*/
-            //} else {
+            // } else {
             obj = this.dataStore[pointName];
-            //}
+            // }
 
 
-            let keys: string[] = Object.keys(obj);
-            let filterKeys: string[] = Object.keys(filter);
+            const keys: string[] = Object.keys(obj);
+            const filterKeys: string[] = Object.keys(filter);
 
             keys.forEach((key: string) => {
-                let matching: boolean = true;
+                let matching = true;
 
                 filterKeys.forEach((filterKey: string) => {
                     if (filter[filterKey] !== obj[+key][filterKey]) {
@@ -293,7 +293,7 @@ export class CordovaLocal extends ExternalInterface {
 
 
     private getEntityFromStore(type: string, id: number, callback: Function) {
-        let pointName: string = type;
+        const pointName: string = type;
         this.loadPointFromStorageIfEmpty(type, () => {
             callback(this.dataStore[pointName][String(id)]);
         });
@@ -301,7 +301,7 @@ export class CordovaLocal extends ExternalInterface {
 
 
     private deleteEntityFromStore(type: string, id: number, callback: Function) {
-        let pointName: string = type;
+        const pointName: string = type;
         this.loadPointFromStorageIfEmpty(type, () => {
             if (this.dataStore[pointName][String(id)]) {
                 delete this.dataStore[pointName][String(id)];
@@ -316,19 +316,19 @@ export class CordovaLocal extends ExternalInterface {
 
     // TODO
     private set lastUsedId(value: number) {
-        let lastUsedIdKey: string = 'lastusedid';
+        const lastUsedIdKey = 'lastusedid';
 
         localStorage[lastUsedIdKey] = value;
     }
 
     /**
      * Get last used id from localStorage
-     * @returns {number} The value
+     * @returns The value
      */
 
     // TODO
     private get lastUsedId(): number {
-        let lastUsedIdKey: string = 'lastusedid';
+        const lastUsedIdKey = 'lastusedid';
 
         if (localStorage[lastUsedIdKey] === undefined || localStorage[lastUsedIdKey] === '') {
             return 0;
@@ -339,21 +339,21 @@ export class CordovaLocal extends ExternalInterface {
 
 
     private savePointToStorage(type: string) {
-        let pointName: string = type;
+        const pointName: string = type;
 
         console.log('77', this.dataStore[pointName]);
 
         if (this.dataStore[pointName]) {
 
-            let tobj = {};
+            const tobj = {};
 
-            for (let key in this.dataStore[pointName]) {
+            for (const key in this.dataStore[pointName]) {
                 if (this.dataStore[pointName].hasOwnProperty(key)) {
                     tobj[key] = this.dataStore[pointName][key];
                 }
             }
 
-            let obj: Object = {
+            const obj = {
                 data: tobj
             };
 
@@ -374,7 +374,7 @@ export class CordovaLocal extends ExternalInterface {
         console.log('3');
         this.readEndpoint(pointName, text => {
             console.log(JSON.parse(text));
-            this.dataStore[pointName] = JSON.parse(text)['data'];
+            this.dataStore[pointName] = JSON.parse(text).data;
             success();
         }, () => {
             this.dataStore[pointName] = {};
@@ -383,7 +383,7 @@ export class CordovaLocal extends ExternalInterface {
 
 
     private loadPointFromStorageIfEmpty(type: string, success: Function) {
-        let pointName: string = type;
+        const pointName: string = type;
         console.log('2');
 
         if (!this.dataStore[pointName]) {
@@ -395,11 +395,11 @@ export class CordovaLocal extends ExternalInterface {
         }
     }
 
-    loadEntity(type: string, id: number): Observable<EntityDataSet> {
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    loadEntity(type: string, id: number): Observable<EntityDataSet<T>> {
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.loadPointFromStorageIfEmpty(type, () => {
-            this.getEntityFromStore(type, id, (data: EntityDataSet) => {
+            this.getEntityFromStore(type, id, (data) => {
                 subject.next(data ? data : null);
             });
 
@@ -408,13 +408,11 @@ export class CordovaLocal extends ExternalInterface {
         return subject;
     }
 
-    loadCollection(type: string, filter: FilterData = {}): Observable<CollectionDataSet> {
-        let subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
+    loadCollection(type: string, filter: FilterData = {}): Observable<CollectionDataSet<T>> {
+        const subject = new ReplaySubject<CollectionDataSet<T>>(1);
 
         this.loadPointFromStorageIfEmpty(type, () => {
-            console.log('1');
-            this.getCollectionFromStore(type, filter, (data: CollectionDataSet) => {
-                console.log('1b', data);
+            this.getCollectionFromStore(type, filter, (data) => {
                 subject.next(data ? data : null);
             });
         });
@@ -422,10 +420,8 @@ export class CordovaLocal extends ExternalInterface {
         return subject;
     }
 
-    saveEntity(entity: EntityDataSet, type: string, id: number): Observable<EntityDataSet> {
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
-
-        console.log('save', entity);
+    saveEntity(entity: EntityDataSet<T>, type: string, id: number) {
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.loadPointFromStorageIfEmpty(type, () => {
             this.setEntityInStore(type, id, entity);
@@ -434,24 +430,23 @@ export class CordovaLocal extends ExternalInterface {
         });
 
 
-        return subject;
+        return subject.asObservable();
     }
 
-    createEntity(type: string, data: EntityDataSet): Observable<EntityDataSet> {
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    createEntity(type: string, data: EntityDataSet<any>) {
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
-        console.log('5', data);
-        let newId: number = ++this.lastUsedId;
+        const newId: number = ++this.lastUsedId;
         data.id = newId;
         this.setEntityInStore(type, newId, data);
 
-        subject.next(data);
+        subject.next(data as EntityDataSet<T>);
 
-        return subject;
+        return subject.asObservable();
     }
 
-    deleteEntity(type: string, id: number): Observable<boolean> {
-        let subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
+    deleteEntity(type: string, id: number) {
+        const subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
 
         this.loadPointFromStorageIfEmpty(type, () => {
             this.deleteEntityFromStore(type, id, (val: boolean) => {
@@ -459,24 +454,19 @@ export class CordovaLocal extends ExternalInterface {
             });
         });
 
-        return subject;
+        return subject.asObservable();
     }
 
     private setEntityInStore(type: string, id: number, data: EntityDataSet) {
-        let pointName: string = type;
-
-        console.log('set entity in store');
+        const pointName: string = type;
 
         this.loadPointFromStorageIfEmpty(type, () => {
             if (!this.dataStore[pointName]) {
                 this.dataStore[pointName] = {};
             }
 
-            console.log('set 2', data);
 
             this.dataStore[pointName][String(id)] = data;
-
-            console.log('dts', this.dataStore[pointName]);
 
             this.savePointToStorage(type);
         });

@@ -11,7 +11,7 @@ import io from 'socket.io-client';
 /**
  * Nodejs interface
  */
-export class Nodejs extends ExternalInterface {
+export class Nodejs<T extends { [key: string]: any }> extends ExternalInterface<T> {
 
     private messagePrefix: string;
     private retrieveEvent: string;
@@ -23,16 +23,16 @@ export class Nodejs extends ExternalInterface {
 
     private connected = true;
 
-    private collectionSubjects: { [key: string]: { [key: string]: ReplaySubject<CollectionDataSet> } } = {};
-    private dataCollections: { [key: string]: { [key: string]: CollectionDataSet } } = {};
+    private collectionSubjects: { [key: string]: { [key: string]: ReplaySubject<CollectionDataSet<T>> } } = {};
+    private dataCollections: { [key: string]: { [key: string]: CollectionDataSet<T> } } = {};
     private collectionFilters: { [key: string]: { [key: string]: FilterData } } = {};
 
     // private temporaryCollectionsStore:{[key:string]:ReplaySubject<CollectionDataSet>} = {};
 
     /**
      * Create the nodejs interface
-     * @param {NodejsConfiguration} configuration Interface configuration object
-     * @param {DataConnector} connector Reference to the connector
+     * @param configuration Interface configuration object
+     * @param connector Reference to the connector
      */
     constructor(
         private configuration: NodejsConfiguration,
@@ -139,26 +139,26 @@ export class Nodejs extends ExternalInterface {
 
     /**
      * Load entity in nodejs service
-     * @param {string} type Endpoint name
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the data
+     * @param type Endpoint name
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the data
      */
-    loadEntity(type: string, id: number, errorHandler: Function): Observable<EntityDataSet> {
+    loadEntity(type: string, id: number, errorHandler: Function): Observable<EntityDataSet<T>> {
         if (!this.connected) {
             this.sendError(0, '', errorHandler);
         }
 
         return this.loadCollection(type, {
             id
-        }).pipe(map((data: CollectionDataSet) => {
+        }).pipe(map((data) => {
             return data[0];
         }));
     }
 
-    saveEntity(data: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
+    saveEntity(data: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet<T>> {
 
-        const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         const cid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
 
@@ -183,18 +183,18 @@ export class Nodejs extends ExternalInterface {
 
     /**
      * Load a collection in nodejs service
-     * @param {string} type Endpoint name
-     * @param {{[p: string]: any}} filter Filter Object
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<CollectionDataSet>} Observable returning the collection data
+     * @param type Endpoint name
+     * @param filter Filter Object
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the collection data
      */
-    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet> {
+    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet<T>> {
 
         // à voir si il y a besoin d'initialiser
         // this.initializeSocket();
 
         const hash: string = ObjectHash(filter);
-        const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
+        const subject = new ReplaySubject<CollectionDataSet<T>>(1);
 
         if (!this.dataCollections[type]) {
             this.dataCollections[type] = {};
@@ -221,8 +221,8 @@ export class Nodejs extends ExternalInterface {
 
             this.socket.emit('connexion', type, filter, cid);
 
-            const callback = (data: CollectionDataSet) => {
-                const res: CollectionDataSet = {};
+            const callback = (data: CollectionDataSet<T>) => {
+                const res: CollectionDataSet<T> = {};
 
                 for (const id in data) {
                     const mid: number = data[id].data.id || data[id].id;
@@ -247,14 +247,14 @@ export class Nodejs extends ExternalInterface {
 
     /**
      * Create entity in nodejs service
-     * @param {string} type Endpoint name
-     * @param {EntityDataSet} data Data used to create the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the entity data
+     * @param type Endpoint name
+     * @param data Data used to create the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the entity data
      */
-    createEntity(type: string, data: EntityDataSet, errorHandler: Function = null): Observable<EntityDataSet> {
+    createEntity(type: string, data: EntityDataSet<any>, errorHandler: Function = null): Observable<EntityDataSet<T>> {
 
-        const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         const cid: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         const id: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -280,10 +280,10 @@ export class Nodejs extends ExternalInterface {
 
     /**
      * Delete entity from nodejs service
-     * @param {string} type Endpoint type
-     * @param {number} id Entity id
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>} True if deletion success
+     * @param type Endpoint type
+     * @param id Entity id
+     * @param errorHandler Function used to handle errors
+     * @returns True if deletion success
      */
     deleteEntity(type: string, id: number, errorHandler: Function = null): Observable<boolean> {
 
@@ -296,7 +296,7 @@ export class Nodejs extends ExternalInterface {
         if (!this.connected) {
             this.sendError(0, '', errorHandler);
         } else {
-            const requestData: Object = {
+            const requestData = {
                 command: 'delete',
                 id,
                 type,

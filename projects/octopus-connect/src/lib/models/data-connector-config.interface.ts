@@ -50,7 +50,7 @@ export interface DataConnectorConfig {
 
     // currently not used
     interfaces?: {
-        [key: string]: ExternalInterface
+        [key: string]: ExternalInterface<any>
     };
 
     globalCallback?: Function;

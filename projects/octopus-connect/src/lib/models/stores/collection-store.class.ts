@@ -7,25 +7,22 @@ import {FilterData} from '../types';
 /**
  * Collection store: where the collections and the collection observables are stored for an endpoint
  */
-export class CollectionStore {
+export class CollectionStore<T extends { [key: string]: any }> {
 
     /**
      * Stored collection observables, indexed by filter hash
-     * @type {{}}
      */
-    private collectionObservables: { [key: string]: Subject<DataCollection> } = {};
+    private collectionObservables: { [key: string]: Subject<DataCollection<T>> } = {};
 
     /**
      * Filters indexed by their hash
-     * @type {{}}
      */
     public filters: FilterData = {};
 
     /**
      * Stored collections, indexed by filter hash
-     * @type {{}}
      */
-    public collections: { [key: string]: DataCollection } = {};
+    public collections: { [key: string]: DataCollection<T> } = {};
 
     /**
      * Creates the store
@@ -47,22 +44,22 @@ export class CollectionStore {
 
     /**
      * Registers the collection in store and update associated subject. If the subject does not exists, creates it
-     * @param {DataCollection} collection Collection to register
-     * @param {FilterData} filter Collection filter
-     * @returns {Observable<DataCollection>} Observable associated to the collection
+     * @param collection Collection to register
+     * @param filter Collection filter
+     * @returns Observable associated to the collection
      */
-    registerCollection(collection: DataCollection, filter: FilterData): Observable<DataCollection> {
+    registerCollection(collection: DataCollection<T>, filter: FilterData): Observable<DataCollection<T>> {
 
         const hash: string = ObjectHash(filter);
         this.filters[hash] = filter;
         this.collections[hash] = collection;
 
-        let collectionSubject: Subject<DataCollection>;
+        let collectionSubject: Subject<DataCollection<T>>;
 
         if (this.collectionObservables[hash]) {
             collectionSubject = this.collectionObservables[hash];
         } else {
-            collectionSubject = new Subject<DataCollection>();
+            collectionSubject = new Subject<DataCollection<T>>();
             this.collectionObservables[hash] = collectionSubject;
         }
 
@@ -72,11 +69,11 @@ export class CollectionStore {
 
     /**
      * Register entity in collection in store if entity match collection filter
-     * @param {DataEntity} entity Entity to register
-     * @param {Observable<DataEntity>} entityObservable Entity observable to register
-     * @param {boolean} refreshCollection If true, the collection observable is refreshed
+     * @param entity Entity to register
+     * @param entityObservable Entity observable to register
+     * @param refreshCollection If true, the collection observable is refreshed
      */
-    registerEntityInCollections(entity: DataEntity, entityObservable: Observable<DataEntity>, refreshCollection: boolean = true) {
+    registerEntityInCollections(entity: DataEntity<T>, entityObservable: Observable<DataEntity<T>>, refreshCollection: boolean = true) {
         const collectionKeys: string[] = Object.keys(this.collections);
 
         collectionKeys.forEach((key: string) => {
@@ -92,7 +89,7 @@ export class CollectionStore {
 
     /**
      * Refresh collection observable by filter
-     * @param {FilterData} filter Filter object
+     * @param filter Filter object
      */
     refreshCollections(filter: FilterData) {
         const filterKeys: string[] = Object.keys(this.collectionObservables);
@@ -106,9 +103,9 @@ export class CollectionStore {
 
     /**
      * Delete entity from stored collections
-     * @param {DataEntity} entity Entity to delete
+     * @param entity Entity to delete
      */
-    deleteEntityFromCollection(entity: DataEntity) {
+    deleteEntityFromCollection(entity: DataEntity<T>) {
 
         const collectionKeys: string[] = Object.keys(this.collections);
 
@@ -122,7 +119,7 @@ export class CollectionStore {
 
     /**
      * Delete all data for a specific filter
-     * @param {FilterData} filter The filter used to delete data
+     * @param filter The filter used to delete data
      */
     unregister(filter: FilterData) {
 
@@ -143,11 +140,11 @@ export class CollectionStore {
 
     /**
      * Test if the entity matches the filter
-     * @param {DataEntity} entity Entity to test
-     * @param {FilterData} filter Filter object
-     * @returns {boolean} True if the entity matches the filter
+     * @param entity Entity to test
+     * @param filter Filter object
+     * @returns True if the entity matches the filter
      */
-    entityMatchFilter(entity: DataEntity, filter: FilterData): boolean {
+    entityMatchFilter(entity: DataEntity<T>, filter: FilterData): boolean {
         const filterKeys: string[] = Object.keys(filter);
 
         for (const key of filterKeys) {
@@ -161,8 +158,8 @@ export class CollectionStore {
 
     /**
      *
-     * @param {FilterData} filter1
-     * @param {FilterData} filter2
+     * @param filter1
+     * @param filter2
      * @returns {boolean}
      */
     filterMatching(filter1: FilterData = {}, filter2: FilterData = {}): boolean {
@@ -196,23 +193,22 @@ export class CollectionStore {
 
     /**
      * Returns the observable associated to the specified filter
-     * @param {FilterData} filter Filter object
-     * @param useCache
-     * @returns {Observable<DataCollection>} The observable associated to the filter object
+     * @param filter Filter object
+     * @returns The observable associated to the filter object
      */
-    getCollectionSubject(filter: FilterData, useCache = false): Subject<DataCollection> {
+    getCollectionSubject(filter: FilterData, useCache = false): Subject<DataCollection<T>> {
 
         const hash: string = ObjectHash(filter);
 
         if (this.collectionObservables[hash]) {
             return this.collectionObservables[hash];
         } else {
-            let subject: Subject<DataCollection>;
+            let subject: Subject<DataCollection<T>>;
 
             if (useCache) {
-                subject = new ReplaySubject<DataCollection>();
+                subject = new ReplaySubject<DataCollection<T>>();
             } else {
-                subject = new Subject<DataCollection>();
+                subject = new Subject<DataCollection<T>>();
             }
             this.collectionObservables[hash] = subject;
             return subject;
@@ -221,8 +217,7 @@ export class CollectionStore {
 
     /**
      * Returns true if collection is defined in store
-     * @param {FilterData} filter Collection filter object
-     * @returns {boolean}
+     * @param filter Collection filter object
      */
     isInStore(filter: FilterData): boolean {
         const hash: string = ObjectHash(filter);

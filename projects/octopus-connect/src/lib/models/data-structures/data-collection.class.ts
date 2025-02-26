@@ -7,7 +7,7 @@ import {ModelSchema} from 'octopus-model';
 /**
  * Data collection object
  */
-export class DataCollection {
+export class DataCollection<T extends { [key: string]: any } = any> {
 
     paginated = false;
 
@@ -15,42 +15,36 @@ export class DataCollection {
 
     /**
      * Entities contained by the collection
-     * @type {any[]}
      */
-    entities: DataEntity[] = [];
+    entities: DataEntity<T>[] = [];
 
     /**
      * Observables of entities contained by the collection
-     * @type {any[]}
      */
-    entitiesObservables: Observable<DataEntity>[] = [];
+    entitiesObservables: Observable<DataEntity<T>>[] = [];
 
     /**
      * Creates the collection
-     * @param {string} type
-     * @param {CollectionDataSet | EntityDataSet[]} data
-     * @param {DataConnector} connector
-     * @param {ModelSchema} structure
      */
     constructor(
         public type: string,
-        data: CollectionDataSet | EntityDataSet[],
+        data: CollectionDataSet<T> | EntityDataSet<T>[],
         private connector: DataConnector = null,
         structure: ModelSchema = null,
         embeddings: { [key: string]: string } = null
     ) {
 
         if (Array.isArray(data)) {
-            data.forEach((elem: Object) => {
+            data.forEach((elem) => {
 
                 if (structure) {
-                    elem = structure.filterModel(elem);
+                    elem = structure.filterModel(elem) as EntityDataSet<T>;
                 }
 
-                this.entities.push(new DataEntity(type, elem, connector, elem['id'], embeddings));
+                this.entities.push(new DataEntity<T>(type, elem, connector, elem?.id, embeddings));
             });
         } else {
-            let keys: string[] = Object.keys(data);
+            const keys: string[] = Object.keys(data);
             keys.forEach((key: string) => {
 
                 if (structure) {
@@ -65,10 +59,10 @@ export class DataCollection {
 
     /**
      * Remove entity from collection
-     * @param {number} id Id of the entity to delete
+     * @param id Id of the entity to delete
      */
     deleteEntity(id: number | string) {
-        this.entities.forEach((entity: DataEntity, index: number) => {
+        this.entities.forEach((entity, index: number) => {
             if (entity.id === id) {
                 this.entities.splice(index, 1);
                 this.entitiesObservables.splice(index, 1);
@@ -78,12 +72,12 @@ export class DataCollection {
 
     /**
      * Register entity in collection, if not already contained by the collection
-     * @param {DataEntity} entity Entity to register
-     * @param {Observable<DataEntity>} entityObservable Entity observable to register
+     * @param entity Entity to register
+     * @param entityObservable Entity observable to register
      */
-    registerEntity(entity: DataEntity, entityObservable: Observable<DataEntity>) {
+    registerEntity(entity: DataEntity<T>, entityObservable: Observable<DataEntity<T>>) {
         let count = 0;
-        for (let collectionEntity of this.entities) {
+        for (const collectionEntity of this.entities) {
             if (entity.id && entity.id === collectionEntity.id) {
                 this.entities[count] = entity;
                 this.entitiesObservables[count] = entityObservable;

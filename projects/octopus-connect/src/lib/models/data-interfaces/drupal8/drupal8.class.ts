@@ -10,13 +10,12 @@ import {Drupal8Configuration} from './drupal8-configuration.interface';
 /**
  * Http external interface
  */
-export class Drupal8 extends ExternalInterface {
+export class Drupal8<T extends { [key: string]: any }> extends ExternalInterface<T> {
 
     /**
      *
-     * @type {boolean}
      */
-    //authenticated:ReplaySubject<EntityDataSet>;
+    // authenticated:ReplaySubject<EntityDataSet<T>>;
 
     /**
      *
@@ -32,8 +31,8 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Creates the http interface
-     * @param {HttpConfiguration} configuration Configuration object
-     * @param {DataConnector} connector Reference to the connector
+     * @param configuration Configuration object
+     * @param connector Reference to the connector
      */
     constructor(
         private configuration: Drupal8Configuration,
@@ -44,7 +43,7 @@ export class Drupal8 extends ExternalInterface {
         this.useDiff = true;
 
         if (configuration.headers) {
-            for (let header in configuration.headers) {
+            for (const header in configuration.headers) {
                 if (configuration.headers.hasOwnProperty(header)) {
                     this.headers[header] = configuration.headers[header];
                 }
@@ -60,16 +59,16 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Is the user authenticated on this service ?
-     * @returns {Observable<EntityDataSet>}
+     * @returns {Observable<EntityDataSet<T>>}
      */
-    get authenticated(): Observable<EntityDataSet> {
-        let value: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    get authenticated(): Observable<EntityDataSet<T>> {
+        const value: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.dataStore.user = JSON.parse(localStorage.getItem(`${this.interfaceName}_currentUser`));
-        let expire: number = JSON.parse(localStorage.getItem(`${this.interfaceName}_expires_in`));
+        const expire: number = JSON.parse(localStorage.getItem(`${this.interfaceName}_expires_in`));
         if (expire > Date.now()) {
             this.dataStore.user = JSON.parse(localStorage.getItem(`${this.interfaceName}_currentUser`));
-            this.setToken(JSON.parse(localStorage.getItem(`${this.interfaceName}_accessToken`))).subscribe((data: EntityDataSet) => {
+            this.setToken(JSON.parse(localStorage.getItem(`${this.interfaceName}_accessToken`))).subscribe((data: EntityDataSet<T>) => {
                 value.next(data);
             });
         } else if (expire && expire < Date.now()) {
@@ -84,27 +83,27 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Add headers to the request
-     * @param {XMLHttpRequest} request A xhr request
+     * @param request A xhr request
      */
     private addHeaders(request: XMLHttpRequest) {
-        for (let headerName in this.headers) {
+        for (const headerName in this.headers) {
             request.setRequestHeader(headerName, this.headers[headerName]);
         }
     }
 
     /**
      * Load entity in http service
-     * @param {string} type Endpoint name
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the data
+     * @param type Endpoint name
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the data
      */
-    loadEntity(type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
-        let request: XMLHttpRequest = new XMLHttpRequest();
-        let url: string = `${<string> this.configuration.apiUrl}${type}/${id}`;
+    loadEntity(type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet<T>> {
+        const request: XMLHttpRequest = new XMLHttpRequest();
+        const url = `${this.configuration.apiUrl as string}${type}/${id}`;
         request.open('GET', url, true);
 
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.addHeaders(request);
 
@@ -125,24 +124,24 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Load a collection in http service
-     * @param {string} type Endpoint name
-     * @param {{[p: string]: any}} filter Filter Object
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<CollectionDataSet>} Observable returning the collection data
+     * @param type Endpoint name
+     * @param filter Filter Object
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the collection data
      */
-    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet> {
-        let request: XMLHttpRequest = new XMLHttpRequest();
+    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet<T>> {
+        const request: XMLHttpRequest = new XMLHttpRequest();
 
-        let url: string = `${<string> this.configuration.apiUrl}${type}`;
+        let url = `${this.configuration.apiUrl as string}${type}`;
 
-        let filterKeys: string[] = Object.keys(filter);
+        const filterKeys: string[] = Object.keys(filter);
 
         if (filterKeys.length > 0) {
             url += '?';
         }
 
         filterKeys.forEach((key: string, index: number) => {
-            let val: any = filter[key];
+            const val: any = filter[key];
             url += `filter[${key}]=${val}`;
 
             if (index < filterKeys.length - 1) {
@@ -154,7 +153,7 @@ export class Drupal8 extends ExternalInterface {
 
         this.addHeaders(request);
 
-        let subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
+        const subject: ReplaySubject<CollectionDataSet<T>> = new ReplaySubject<CollectionDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -173,25 +172,25 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Save entity to the http service
-     * @param {EntityDataSet} entity Entity data to save
-     * @param {string} type Endpoint name
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the entity data
+     * @param entity Entity data to save
+     * @param type Endpoint name
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the entity data
      */
-    saveEntity(entity: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
-        let request: XMLHttpRequest = new XMLHttpRequest();
-        let url: string = `${<string> this.configuration.apiUrl}${type}/${id}`;
+    saveEntity(entity: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet<T>> {
+        const request: XMLHttpRequest = new XMLHttpRequest();
+        const url = `${this.configuration.apiUrl as string}${type}/${id}`;
         request.open('PATCH', url, true);
 
         this.addHeaders(request);
 
-        let subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
-        let saveObject: Object = {
+        const saveObject = {
             data: {
-                id: id,
-                type: type,
+                id,
+                type,
                 attributes: entity
             }
         };
@@ -213,26 +212,26 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Create entity in http service
-     * @param {string} type Endpoint name
-     * @param {EntityDataSet} data Data used to create the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<EntityDataSet>} Observable returning the entity data
+     * @param type Endpoint name
+     * @param data Data used to create the entity
+     * @param errorHandler Function used to handle errors
+     * @returns Observable returning the entity data
      */
-    createEntity(type: string, data: EntityDataSet, errorHandler: Function = null): Observable<EntityDataSet> {
-        let request: XMLHttpRequest = new XMLHttpRequest();
-        let url: string = `${<string> this.configuration.apiUrl}${type}`;
+    createEntity(type: string, data: EntityDataSet<any>, errorHandler: Function = null): Observable<EntityDataSet<T>> {
+        const request: XMLHttpRequest = new XMLHttpRequest();
+        const url = `${this.configuration.apiUrl as string}${type}`;
         request.open('POST', url, true);
 
         this.addHeaders(request);
 
-        let addObject: Object = {
+        const addObject = {
             data: {
                 attributes: data,
-                type: type
+                type
             }
         };
 
-        let subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -251,19 +250,19 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Delete entity from http service
-     * @param {string} type Endpoint type
-     * @param {number} id Entity id
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>} True if deletion success
+     * @param type Endpoint type
+     * @param id Entity id
+     * @param errorHandler Function used to handle errors
+     * @returns True if deletion success
      */
     deleteEntity(type: string, id: number, errorHandler: Function = null): Observable<boolean> {
-        let request: XMLHttpRequest = new XMLHttpRequest();
-        let url: string = `${<string> this.configuration.apiUrl}${type}/${id}`;
+        const request: XMLHttpRequest = new XMLHttpRequest();
+        const url = `${this.configuration.apiUrl as string}${type}/${id}`;
         request.open('DELETE', url, true);
 
         this.addHeaders(request);
 
-        let subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
+        const subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -282,10 +281,10 @@ export class Drupal8 extends ExternalInterface {
 
 
     getOauthToken(login: string, password: string): Observable<Object> {
-        let subject: ReplaySubject<Object> = new ReplaySubject<Object>(1);
+        const subject: ReplaySubject<Object> = new ReplaySubject<Object>(1);
 
-        let req: XMLHttpRequest = new XMLHttpRequest();
-        let url: string = `${<string> this.configuration.apiUrl}oauth/token`;
+        const req: XMLHttpRequest = new XMLHttpRequest();
+        const url = `${this.configuration.apiUrl as string}oauth/token`;
 
         req.open('POST', url, true);
 
@@ -299,16 +298,16 @@ export class Drupal8 extends ExternalInterface {
             }
         };
 
-        let data: any = {
+        const data: any = {
             grant_type: 'password',
             client_id: this.configuration.clientId,
             userName: login,
-            password: password,
+            password,
             scope: this.configuration.scope || 'administrator angular'
         };
 
         if (this.configuration.clientSecret) {
-            data['client_secret'] = this.configuration.clientSecret;
+            data.client_secret = this.configuration.clientSecret;
         }
 
         req.send(data);
@@ -318,26 +317,26 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      * Authenticate in service
-     * @param {string} login User login
-     * @param {string} password User password
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>} True if authentication success
+     * @param login User login
+     * @param password User password
+     * @param errorHandler Function used to handle errors
+     * @returns True if authentication success
      */
-    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet> {
+    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
 
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
-        let request: XMLHttpRequest = new XMLHttpRequest();
+        const request: XMLHttpRequest = new XMLHttpRequest();
 
-        let url: string = `${<string> this.configuration.apiUrl}oauth/token`;
+        const url = `${this.configuration.apiUrl as string}oauth/token`;
         request.open('POST', url, true);
 
         request.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
 
 
-        //request.setRequestHeader("Authorization", 'Basic ' + btoa(login.trim() + ':' + password));
+        // request.setRequestHeader("Authorization", 'Basic ' + btoa(login.trim() + ':' + password));
 
-        let observables: Observable<any>[] = [];
+        const observables: Observable<any>[] = [];
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -345,19 +344,19 @@ export class Drupal8 extends ExternalInterface {
 
                     localStorage[`${this.interfaceName}_userName`] = login;
 
-                    let loginData: Object = JSON.parse(request.responseText);
-                    let expire: number = +loginData['expires_in'] - 3600;
+                    const loginData = JSON.parse(request.responseText);
+                    const expire: number = +loginData.expires_in - 3600;
                     if (expire < 3600) {
                         if (localStorage.getItem(`${this.interfaceName}_accessToken`)) {
-                            observables.push(this.setToken(loginData['access_token'], errorHandler));
+                            observables.push(this.setToken(loginData.access_token, errorHandler));
                             this.setExpireDate(expire);
-                            this.setRefreshToken(loginData['refresh_token']);
+                            this.setRefreshToken(loginData.refresh_token);
                         }
-                        observables.push(this.refreshToken(loginData['refresh_token'], errorHandler));
+                        observables.push(this.refreshToken(loginData.refresh_token, errorHandler));
                     } else {
-                        observables.push(this.setToken(loginData['access_token'], errorHandler));
+                        observables.push(this.setToken(loginData.access_token, errorHandler));
                         this.setExpireDate(expire);
-                        this.setRefreshToken(loginData['refresh_token']);
+                        this.setRefreshToken(loginData.refresh_token);
                     }
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler);
@@ -365,27 +364,30 @@ export class Drupal8 extends ExternalInterface {
 
                 observableCombineLatest(...observables).pipe(map((values: any[]) => {
                     return values[0];
-                })).subscribe((data: EntityDataSet) => {
+                })).subscribe((data: EntityDataSet<T>) => {
                     subject.next(data);
                 });
             }
         };
 
-        let data: Object = {
+        const data = {
             grant_type: 'password',
             client_id: this.configuration.clientId,
             username: login,
-            password: password,
-            scope: this.configuration.scope || 'administrator angular'
+            password,
+            scope: this.configuration.scope || 'administrator angular',
+            client_secret: undefined
         };
 
         if (this.configuration.clientSecret) {
-            data['client_secret'] = this.configuration.clientSecret;
+            data.client_secret = this.configuration.clientSecret;
+        } else {
+            delete data.client_secret;
         }
 
-        let dataStr: string = '';
+        let dataStr = '';
 
-        for (let id in data) {
+        for (const id in data) {
             dataStr += id + '=' + data[id] + '&';
         }
 
@@ -415,13 +417,13 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      *
-     * @param {string} accessToken
-     * @param {Function} errorHandler
+     * @param accessToken
+     * @param errorHandler
      */
-    private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet> {
+    private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         if (accessToken && accessToken != '') {
             localStorage.setItem(`${this.interfaceName}_accessToken`, JSON.stringify(accessToken));
-            this.headers['Authorization'] = 'Bearer ' + accessToken;
+            this.headers.Authorization = 'Bearer ' + accessToken;
 
             return this.getMe(true, errorHandler);
         }
@@ -429,34 +431,34 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      *
-     * @param {number} expire
+     * @param expire
      */
     private setExpireDate(expire: number) {
-        let date: number = Date.now();
+        const date: number = Date.now();
         localStorage.setItem(`${this.interfaceName}_expires_in`, JSON.stringify(date + (expire * 1000)));
     }
 
     /**
      *
-     * @param {string} refreshToken
-     * @param {Function} errorHandler
+     * @param refreshToken
+     * @param errorHandler
      */
     private refreshToken(refreshToken: string, errorHandler: Function): Observable<Object> {
 
-        let subject: ReplaySubject<Object> = new ReplaySubject<Object>(1);
+        const subject: ReplaySubject<Object> = new ReplaySubject<Object>(1);
 
-        let request: XMLHttpRequest = new XMLHttpRequest();
+        const request: XMLHttpRequest = new XMLHttpRequest();
 
-        let url: string = `${<string> this.configuration.apiUrl}refresh-token/${refreshToken}`;
+        const url = `${this.configuration.apiUrl as string}refresh-token/${refreshToken}`;
         request.open('GET', url, true);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    let userData: Object = JSON.parse(request.responseText);
-                    this.setToken(userData['access_token'], errorHandler);
-                    this.setExpireDate(+userData['expires_in'] - 3600);
-                    this.setRefreshToken(userData['refresh_token']);
+                    const userData = JSON.parse(request.responseText);
+                    this.setToken(userData.access_token, errorHandler);
+                    this.setExpireDate(+userData.expires_in - 3600);
+                    this.setRefreshToken(userData.refresh_token);
                     subject.next(userData);
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler);
@@ -471,7 +473,7 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      *
-     * @param {string} refreshToken
+     * @param refreshToken
      */
     private setRefreshToken(refreshToken: string) {
         localStorage.setItem(`${this.interfaceName}_refreshToken`, JSON.stringify(refreshToken));
@@ -480,25 +482,25 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      *
-     * @param {boolean} complete
-     * @param {Function} errorHandler
-     * @returns {Observable<EntityDataSet>}
+     * @param complete
+     * @param errorHandler
+     * @returns {Observable<EntityDataSet<T>>}
      */
-    getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet> {
+    getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet<T>> {
 
-        let subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
-        let request: XMLHttpRequest = new XMLHttpRequest();
+        const request: XMLHttpRequest = new XMLHttpRequest();
 
-        let url: string = `${<string> this.configuration.apiUrl}user?filter[name][value]=${localStorage[`${this.interfaceName}_userName`]}`;
+        const url = `${this.configuration.apiUrl as string}user?filter[name][value]=${localStorage[`${this.interfaceName}_userName`]}`;
         request.open('GET', url, true);
         this.addHeaders(request);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    let userData: Object = JSON.parse(request.responseText)['data'][0]['attributes'];
-                    userData['id'] = userData['uuid'];
+                    const userData = JSON.parse(request.responseText).data[0].attributes;
+                    userData.id = userData.uuid;
                     subject.next(userData);
                     this.setMe(userData, complete);
                 } else {
@@ -518,44 +520,44 @@ export class Drupal8 extends ExternalInterface {
 
     /**
      *
-     * @param {EntityDataSet} userData
-     * @param {boolean} complete
+     * @param userData
+     * @param complete
      */
     setMe(userData: EntityDataSet, complete: boolean = true) {
 
         if (complete) {
             this.dataStore.user = userData;
-            //this.data.next(this.dataStore.user);
+            // this.data.next(this.dataStore.user);
             localStorage.setItem(`${this.interfaceName}_currentUser`, JSON.stringify(userData));
         }
 
-        //this.currentUserData = userData;
+        // this.currentUserData = userData;
     }
 
     /**
      * Extract entity data from raw data
-     * @param {string} responseText Response text from server
-     * @returns {EntityDataSet} Entity data
+     * @param responseText Response text from server
+     * @returns Entity data
      */
-    protected extractEntity(responseText: string): EntityDataSet {
-        let data: Object = JSON.parse(responseText)['data']['attributes'];
-        data['id'] = data['uuid'];
+    protected extractEntity(responseText: string): EntityDataSet<T> {
+        const data = JSON.parse(responseText).data.attributes;
+        data.id = data.uuid;
         return data;
     }
 
     /**
      * Extract collection data from raw data
-     * @param {string} responseText Response text from server
-     * @returns {CollectionDataSet} Collection data
+     * @param responseText Response text from server
+     * @returns Collection data
      */
-    protected extractCollection(responseText: string): CollectionDataSet {
-        let data: Object = JSON.parse(responseText);
+    protected extractCollection(responseText: string): CollectionDataSet<T> {
+        const data = JSON.parse(responseText);
 
-        let collectionData: CollectionDataSet = {};
+        const collectionData: CollectionDataSet<T> = {};
 
-        data['data'].forEach((entityData: EntityDataSet) => {
-            entityData['attributes']['id'] = entityData['attributes']['uuid'];
-            collectionData[entityData['attributes']['uuid']] = entityData['attributes'];
+        data.data.forEach((entityData: EntityDataSet<T>) => {
+            entityData.attributes.id = entityData.attributes.uuid;
+            collectionData[entityData.attributes.uuid] = entityData.attributes;
         });
 
         return collectionData;

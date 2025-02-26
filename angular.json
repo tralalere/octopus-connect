@@ -13,7 +13,7 @@
           "builder": "@angular-devkit/build-angular:ng-packagr",
           "options": {
             "tsConfig": "projects/octopus-connect/tsconfig.lib.json",
-            "project": "projects/octopus-connect/ng-package.json"
+            "project": "projects/octopus-connect/ng-package.json",
           },
           "configurations": {
             "production": {

@@ -6,18 +6,17 @@ import {CollectionDataSet, EntityDataSet, FilterData} from '../../types';
 /**
  * Local storage data interface
  */
-export class LocalStorage extends ExternalInterface {
+export class LocalStorage<T extends { [key: string]: any }> extends ExternalInterface<T> {
 
     /**
      * Where are stored the entities
-     * @type {CollectionDataSet}
      */
-    private dataStore: CollectionDataSet = {};
+    private dataStore: CollectionDataSet<T> = {};
 
     /**
      * Create a local storage data interface
-     * @param {LocalStorageConfiguration} configuration Configuration object
-     * @param {DataConnector} connector Reference to the connector
+     * @param configuration Configuration object
+     * @param connector Reference to the connector
      */
     constructor(
         private configuration: LocalStorageConfiguration,
@@ -37,8 +36,8 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * If a prefix is defined in the configuration, returns a concatenation of prefix and endpoint name
-     * @param {string} type Name of the endpoint
-     * @returns {string} The prefixed endpoint name
+     * @param type Name of the endpoint
+     * @returns The prefixed endpoint name
      */
     private getPrefixedType(type: string): string {
         if (this.configuration.prefix) {
@@ -50,7 +49,7 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Load an endpoint from the local storage
-     * @param {string} pointName The endpoint name
+     * @param pointName The endpoint name
      */
     private loadPointFromStorage(pointName: string) {
         if (!localStorage[pointName] || localStorage[pointName] === '') {
@@ -62,10 +61,10 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Load an endpoint from the local storage if storage object is empty for that name
-     * @param {string} type Name of the endpoint
+     * @param type Name of the endpoint
      */
     private loadPointFromStorageIfEmpty(type: string) {
-        let pointName: string = this.getPrefixedType(type);
+        const pointName: string = this.getPrefixedType(type);
 
         if (!this.dataStore[pointName]) {
             this.loadPointFromStorage(pointName);
@@ -74,12 +73,12 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Set entity data in local store
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @param {EntityDataSet} data Entity Data
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @param data Entity Data
      */
     private setEntityInStore(type: string, id: number, data: EntityDataSet) {
-        let pointName: string = this.getPrefixedType(type);
+        const pointName: string = this.getPrefixedType(type);
         this.loadPointFromStorageIfEmpty(type);
         this.dataStore[pointName][id] = data;
         this.savePointToStorage(type);
@@ -87,24 +86,24 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Get entity data from local store
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @returns {EntityDataSet} Data of the entity
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @returns Data of the entity
      */
-    private getEntityFromStore(type: string, id: number): EntityDataSet {
-        let pointName: string = this.getPrefixedType(type);
+    private getEntityFromStore(type: string, id: number) {
+        const pointName: string = this.getPrefixedType(type);
         this.loadPointFromStorageIfEmpty(type);
         return this.dataStore[pointName][id];
     }
 
     /**
      * Delete entity from local store
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @returns {boolean} True if deletion success
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @returns True if deletion success
      */
     private deleteEntityFromStore(type: string, id: number): boolean {
-        let pointName: string = this.getPrefixedType(type);
+        const pointName: string = this.getPrefixedType(type);
         this.loadPointFromStorageIfEmpty(type);
 
         if (this.dataStore[pointName][id]) {
@@ -118,22 +117,22 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Get collection data from local store
-     * @param {string} type Name of the endpoint
-     * @param {FilterData} filter Filter data
-     * @returns {CollectionDataSet} Collection data
+     * @param type Name of the endpoint
+     * @param filter Filter data
+     * @returns Collection data
      */
-    private getCollectionFromStore(type: string, filter: FilterData = {}): CollectionDataSet {
+    private getCollectionFromStore(type: string, filter: FilterData = {}) {
 
-        let pointName: string = this.getPrefixedType(type);
+        const pointName: string = this.getPrefixedType(type);
         this.loadPointFromStorageIfEmpty(type);
 
-        let dataSet: CollectionDataSet = {};
+        const dataSet: CollectionDataSet<T> = {};
 
-        let keys: string[] = Object.keys(this.dataStore[pointName]);
-        let filterKeys: string[] = Object.keys(filter);
+        const keys: string[] = Object.keys(this.dataStore[pointName]);
+        const filterKeys: string[] = Object.keys(filter);
 
         keys.forEach((key: string) => {
-            let matching: boolean = true;
+            let matching = true;
 
             filterKeys.forEach((filterKey: string) => {
                 if (filter[filterKey] !== this.dataStore[pointName][+key][filterKey]) {
@@ -151,10 +150,10 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Save local store to localStorage, for a specified endpoint
-     * @param {string} type Name of the endpoint
+     * @param type Name of the endpoint
      */
     private savePointToStorage(type: string) {
-        let pointName: string = this.getPrefixedType(type);
+        const pointName: string = this.getPrefixedType(type);
 
         if (this.dataStore[pointName]) {
             localStorage[pointName] = JSON.stringify(this.dataStore[pointName]);
@@ -163,20 +162,20 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Set last used id to localStorage
-     * @param {number} value The value to set to
+     * @param value The value to set to
      */
     private set lastUsedId(value: number) {
-        let lastUsedIdKey: string = this.getPrefixedType('lastusedid');
+        const lastUsedIdKey: string = this.getPrefixedType('lastusedid');
 
         localStorage[lastUsedIdKey] = value;
     }
 
     /**
      * Get last used id from localStorage
-     * @returns {number} The value
+     * @returns The value
      */
     private get lastUsedId(): number {
-        let lastUsedIdKey: string = this.getPrefixedType('lastusedid');
+        const lastUsedIdKey: string = this.getPrefixedType('lastusedid');
 
         if (localStorage[lastUsedIdKey] === undefined || localStorage[lastUsedIdKey] === '') {
             return 0;
@@ -187,38 +186,38 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Load an entity from local storage service
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @returns {EntityDataSet} The entity raw datas
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @returns The entity raw datas
      */
-    loadEntity(type: string, id: number): EntityDataSet {
+    loadEntity(type: string, id: number) {
         this.loadPointFromStorageIfEmpty(type);
-        let data: EntityDataSet = this.getEntityFromStore(type, id);
+        const data = this.getEntityFromStore(type, id);
 
         return data ? data : null;
     }
 
     /**
      * Load a collection from local storage service
-     * @param {string} type Name of the endpoint
-     * @param {FilterData} filter Filter data
-     * @returns {CollectionDataSet} The collection raw data
+     * @param type Name of the endpoint
+     * @param filter Filter data
+     * @returns The collection raw data
      */
-    loadCollection(type: string, filter: FilterData = {}): CollectionDataSet {
+    loadCollection(type: string, filter: FilterData = {}) {
         this.loadPointFromStorageIfEmpty(type);
-        let data: CollectionDataSet = this.getCollectionFromStore(type, filter);
+        const data = this.getCollectionFromStore(type, filter);
 
         return data ? data : null;
     }
 
     /**
      * Save an entity to the local storage service
-     * @param {EntityDataSet} entity Entity data to save
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @returns {EntityDataSet} Saved raw data
+     * @param entity Entity data to save
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @returns Saved raw data
      */
-    saveEntity(entity: EntityDataSet, type: string, id: number): EntityDataSet {
+    saveEntity(entity: EntityDataSet<T>, type: string, id: number) {
         this.loadPointFromStorageIfEmpty(type);
         this.setEntityInStore(type, id, entity);
 
@@ -227,22 +226,22 @@ export class LocalStorage extends ExternalInterface {
 
     /**
      * Create an entity on the local storage service
-     * @param {string} type Name of the endpoint
-     * @param {EntityDataSet} data Entity Data
-     * @returns {EntityDataSet} The saved raw dats
+     * @param type Name of the endpoint
+     * @param data Entity Data
+     * @returns The saved raw dats
      */
-    createEntity(type: string, data: EntityDataSet): EntityDataSet {
-        let newId: number = ++this.lastUsedId;
+    createEntity(type: string, data: EntityDataSet<any>) {
+        const newId: number = ++this.lastUsedId;
         data.id = newId;
         this.setEntityInStore(type, newId, data);
-        return data;
+        return data as EntityDataSet<T>;
     }
 
     /**
      * Delete an entity from the local storage service
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @returns {boolean} True if deletion success
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @returns True if deletion success
      */
     deleteEntity(type: string, id: number): boolean {
         this.loadPointFromStorageIfEmpty(type);

@@ -2,7 +2,7 @@ import {DataConnector} from './data-connector.class';
 import {CollectionOptionsInterface} from './collection-options.interface';
 import {OrderCriteria} from './order-criteria.interface';
 
-export class CollectionPaginator {
+export class CollectionPaginator<T extends { [key: string]: any } = any> {
 
     private _page: number;
     private _offset: number;

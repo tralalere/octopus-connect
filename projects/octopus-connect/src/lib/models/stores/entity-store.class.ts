@@ -1,16 +1,15 @@
 import {DataEntity} from '../data-structures/data-entity.class';
-import {Observable, BehaviorSubject, ReplaySubject} from 'rxjs';
+import {Observable, ReplaySubject} from 'rxjs';
 
 /**
  * Entity store: where the entities and the entities observables are stored for an endpoint
  */
-export class EntityStore {
+export class EntityStore<T extends { [key: string]: any }> {
 
     /**
      * Stores entities subjects, indexed by entity id
-     * @type {{}}
      */
-    private entitiesObservables: { [key: number]: ReplaySubject<DataEntity> } = {};
+    private entitiesObservables: { [key: number]: ReplaySubject<DataEntity<T>> } = {};
 
     /**
      * Creates the store
@@ -25,17 +24,17 @@ export class EntityStore {
 
     /**
      * Registers the entity in store and update associated subject. If the subject does not exists, creates it
-     * @param {DataEntity} entity Entity to register
-     * @param {number} id Entity id
-     * @returns {Observable<DataEntity>} Observable associated to the entity
+     * @param entity Entity to register
+     * @param id Entity id
+     * @returns Observable associated to the entity
      */
-    registerEntity(entity: DataEntity, id: number | string): Observable<DataEntity> {
+    registerEntity(entity: DataEntity<T>, id: number | string): Observable<DataEntity<T>> {
 
         if (id !== -1 && this.entitiesObservables[id]) {
             this.entitiesObservables[id].next(entity);
             return this.entitiesObservables[id];
         } else {
-            let subject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+            const subject: ReplaySubject<DataEntity<T>> = new ReplaySubject<DataEntity<T>>(1);
             subject.next(entity);
 
             if (id !== -1) {
@@ -49,10 +48,10 @@ export class EntityStore {
 
     /**
      * Register an entity subject to a specified id
-     * @param {number} id Id used for registration
-     * @param {ReplaySubject<DataEntity>} subject Subject to register
+     * @param id Id used for registration
+     * @param subject Subject to register
      */
-    registerEntitySubject(id: number, subject: ReplaySubject<DataEntity>) {
+    registerEntitySubject(id: number, subject: ReplaySubject<DataEntity<T>>) {
         if (id !== -1) {
             this.entitiesObservables[id] = subject;
         }
@@ -60,7 +59,7 @@ export class EntityStore {
 
     /**
      * Delete all data for a specific entity id
-     * @param {number} id Entity id
+     * @param id Entity id
      */
     unregister(id: number | string) {
         if (this.entitiesObservables[id]) {
@@ -70,23 +69,23 @@ export class EntityStore {
 
     /**
      * Delete entity from store
-     * @param {DataEntity} entity Entity to delete
+     * @param entity Entity to delete
      */
-    unregisterEntity(entity: DataEntity) {
+    unregisterEntity(entity: DataEntity<T>) {
         delete this.entitiesObservables[entity.id];
     }
 
     /**
      * Returns the observable associated to the specified id
-     * @param {number} id Id used in registration
-     * @returns {Observable<DataEntity>} Entity subject associated to the id
+     * @param id Id used in registration
+     * @returns Entity subject associated to the id
      */
-    getEntityObservable(id: number | string, createObservable: boolean = false): ReplaySubject<DataEntity> {
+    getEntityObservable<T extends { [key: string]: any }>(id: number | string, createObservable: boolean = false): ReplaySubject<DataEntity<T>> {
 
         if (this.entitiesObservables[id] && createObservable === false) {
             return this.entitiesObservables[id];
         } else {
-            let subject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+            const subject: ReplaySubject<DataEntity<T>> = new ReplaySubject<DataEntity<T>>(1);
             this.entitiesObservables[id] = subject;
             return subject;
         }
@@ -94,7 +93,7 @@ export class EntityStore {
 
     /**
      * Returns true if entity is defined in store
-     * @param {number} entityId Entity id
+     * @param entityId Entity id
      * @returns {boolean}
      */
     isInStore(entityId: number): boolean {

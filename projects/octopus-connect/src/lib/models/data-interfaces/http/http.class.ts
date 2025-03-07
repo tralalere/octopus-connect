@@ -457,21 +457,17 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
         const request: XMLHttpRequest = new XMLHttpRequest();
 
         const url = `${this.configuration.apiUrl as string}api/login-token`;
-        console.log('http.class::460::authenticate', url)
         request.open('GET', url, true);
 
         request.setRequestHeader('Authorization', 'Basic ' + btoa(login.trim() + ':' + password));
-        console.log('http.class::464::authenticate', login, password, btoa(login.trim() + ':' + password))
         const observables: Observable<any>[] = [];
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
                     const loginData: any = JSON.parse(request.responseText);
-                    console.log('http.class::471::onreadystatechange', request);
                     const expire: number = +loginData.expires_in - 3600;
                     if (expire < 3600) {
-                        console.log('http.class::474::onreadystatechange', 'expire < 3600', expire)
                         if (localStorage.getItem(`${this.interfaceName}_accessToken`)) {
                             observables.push(this.setToken(loginData.access_token, errorHandler));
                             this.setExpireDate(expire);
@@ -479,13 +475,11 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                         }
                         observables.push(this.refreshToken(loginData.refresh_token, errorHandler));
                     } else {
-                        console.log('http.class::482::onreadystatechange', 'expire > 3600', expire)
                         observables.push(this.setToken(loginData.access_token, errorHandler));
                         this.setExpireDate(expire);
                         this.setRefreshToken(loginData.refresh_token);
                     }
                 } else {
-                    console.log('http.class::488::onreadystatechange', 'error', request.status, request.statusText, JSON.parse(request.responseText))
                     this.sendError(request.status, request.statusText, errorHandler, {
                         response: JSON.parse(request.responseText)
                     });

@@ -481,7 +481,6 @@ export class DataConnector {
     }
 
     authenticated<T extends { [key: string]: any }>(serviceName: string) {
-        console.log('data-connector.class::484::authenticated', serviceName, this.interfaces[serviceName]);
         const selectedInterface = this.interfaces[serviceName];
         return selectedInterface.authenticated.pipe(map((data) => {
             return new DataEntity<T>('users', data, this, data.id);

@@ -7,16 +7,15 @@ import {CollectionPaginator} from '../collection-paginator.class';
 /**
  * Base external interface
  */
-export abstract class ExternalInterface {
+export abstract class ExternalInterface<T extends { [key: string]: any }> {
 
-    get authenticated(): Observable<EntityDataSet> {return undefined}
-    public unexpectedLogoutSubject: Subject<null> = new Subject<null>();
+    get authenticated(): Observable<EntityDataSet<T>> {return undefined}
+    public unexpectedLogoutSubject: Subject<void> = new Subject<void>();
 
     /**
      * if true, the save method will only send the modified properties to the service
-     * @type {boolean}
      */
-    useDiff: boolean = false;
+    useDiff = false;
 
     retryTimeout: number;
 
@@ -24,24 +23,24 @@ export abstract class ExternalInterface {
 
     /**
      * Load an entity from the service
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {EntityDataSet | Observable<EntityDataSet>} A set of data, or an observable
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns A set of data, or an observable
      */
-    loadEntity(type: string, id: number | string, errorHandler: Function = null): EntityDataSet | Observable<EntityDataSet> {
+    loadEntity(type: string, id: number | string, errorHandler: Function = null): EntityDataSet<T> | Observable<EntityDataSet<T>> {
         console.warn('LoadEntity not implemented in interface');
         return null;
     }
 
     /**
      * Load an entity collection from the service
-     * @param {string} type Name of the endpoint
-     * @param {FilterData} filter Collection filter object
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {CollectionDataSet | Observable<CollectionDataSet>} A collection set of data, or an observable
+     * @param type Name of the endpoint
+     * @param filter Collection filter object
+     * @param errorHandler Function used to handle errors
+     * @returns A collection set of data, or an observable
      */
-    loadCollection(type: string, filter: FilterData, errorHandler: Function = null): CollectionDataSet | Observable<CollectionDataSet> {
+    loadCollection(type: string, filter: FilterData, errorHandler: Function = null): CollectionDataSet<T> | Observable<CollectionDataSet<T>> {
         console.warn('LoadCollection not implemented in interface');
         return null;
     }
@@ -54,36 +53,29 @@ export abstract class ExternalInterface {
         console.warn('LoadCollection not implemented in interface');
     }
 
-
-    /**
-     *
-     * @param {string} type
-     * @param {CollectionOptionsInterface} options
-     * @returns {CollectionDataSet | Observable<CollectionDataSet>}
-     */
-    paginatedLoadCollection(type: string, options: CollectionOptionsInterface, paginator: CollectionPaginator, errorHandler: Function = null): CollectionDataSet | Observable<CollectionDataSet> {
+    paginatedLoadCollection(type: string, options: CollectionOptionsInterface, paginator: CollectionPaginator<T>, errorHandler: Function = null): CollectionDataSet<T> | Observable<CollectionDataSet<T>> {
         console.warn('PaginatedLoadCollection not implemented in interface');
         return null;
     }
 
     /**
      * Create an entity on the service
-     * @param {string} type Endpoint name
-     * @param {EntityDataSet} data Base data used to create the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {EntityDataSet | Observable<EntityDataSet>} A set of data, or an observable
+     * @param type Endpoint name
+     * @param data Base data used to create the entity
+     * @param errorHandler Function used to handle errors
+     * @returns A set of data, or an observable
      */
-    createEntity(type: string, data: EntityDataSet, errorHandler: Function = null): EntityDataSet | Observable<EntityDataSet> {
+    createEntity(type: string, data: EntityDataSet<any>, errorHandler: Function = null): EntityDataSet<T> | Observable<EntityDataSet<T>> {
         console.warn('CreateEntity not implemented in interface');
         return null;
     }
 
     /**
      * Delete an entity from the service
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {boolean | Observable<boolean>} True if deletion success
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns True if deletion success
      */
     deleteEntity(type: string, id: number | string, errorHandler: Function = null): boolean | Observable<boolean> {
         console.warn('DeleteEntity not implemented in interface');
@@ -92,25 +84,24 @@ export abstract class ExternalInterface {
 
     /**
      * Save an entity on the service
-     * @param {EntityDataSet} data Data to Save
-     * @param {string} type Name of the endpoint
-     * @param {number} id Id of the entity
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {EntityDataSet | Observable<EntityDataSet>} The saved data
+     * @param data Data to Save
+     * @param type Name of the endpoint
+     * @param id Id of the entity
+     * @param errorHandler Function used to handle errors
+     * @returns The saved data
      */
-    saveEntity(data: EntityDataSet, type: string, id: number | string, errorHandler: Function = null): EntityDataSet | Observable<EntityDataSet> {
+    saveEntity(data: EntityDataSet<T>, type: string, id: number | string, errorHandler: Function = null): EntityDataSet<T> | Observable<EntityDataSet<T>> {
         console.warn('SaveEntity not implemented in interface');
         return null;
     }
 
     /**
      * Authenticating to the service
-     * @param {string} login User login
-     * @param {string} password User password
-     * @param {Function} errorHandler Function used to handle errors
-     * @returns {Observable<boolean>}
+     * @param login User login
+     * @param password User password
+     * @param errorHandler Function used to handle errors
      */
-    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet> {
+    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         console.warn('Authenticate not implemented in interface');
         return null;
     }
@@ -121,7 +112,7 @@ export abstract class ExternalInterface {
 
     /**
      * Release an endpoint if not useful anymore
-     * @param {string} type Name of the endpoint
+     * @param type Name of the endpoint
      */
     release(type: string) {
         console.warn('Release not implemented in interface');
@@ -129,9 +120,9 @@ export abstract class ExternalInterface {
 
     /**
      * Sends an error message
-     * @param {number} code Error code
-     * @param {string} originalMessage Error original text message
-     * @param {Function} errorHandler Error handler Function
+     * @param code Error code
+     * @param originalMessage Error original text message
+     * @param errorHandler Error handler Function
      */
     sendError(code: number, originalMessage: string, errorHandler: Function, data: Object = {}) {
         let error: InterfaceError = new InterfaceError(code, '', originalMessage, data);

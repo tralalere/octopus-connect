@@ -12,7 +12,7 @@ import {OrderDirection} from '../../order-direction.enum';
 /**
  * Http external interface
  */
-export class Http extends ExternalInterface {
+export class Http<T extends { [key: string]: any }> extends ExternalInterface<T> {
 
     private dataStore: {
         user
@@ -63,23 +63,23 @@ export class Http extends ExternalInterface {
     /**
      * Is the user authenticated on this service ?
      */
-    get authenticated(): Observable<EntityDataSet> {
-        const value: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    get authenticated(): Observable<EntityDataSet<T>> {
+        const value: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.dataStore.user = JSON.parse(localStorage.getItem(`${this.interfaceName}_currentUser`));
         const expire: number = JSON.parse(localStorage.getItem(`${this.interfaceName}_expires_in`));
         if (expire > Date.now()) {
             this.dataStore.user = JSON.parse(localStorage.getItem(`${this.interfaceName}_currentUser`));
-            this.setToken(JSON.parse(localStorage.getItem(`${this.interfaceName}_accessToken`))).subscribe((data: EntityDataSet) => {
+            this.setToken(JSON.parse(localStorage.getItem(`${this.interfaceName}_accessToken`))).subscribe((data: EntityDataSet<T>) => {
                 value.next(data);
             }, (err) => {
                 value.error(err);
             });
         } else if (expire && expire < Date.now()) {
-            value.error(null);
+            value.error('Token expired');
             this.logout();
         } else {
-            value.error(null);
+            value.error('Not authenticated');
         }
 
         return value;
@@ -145,12 +145,12 @@ export class Http extends ExternalInterface {
      * @param errorHandler Function used to handle errors
      * @returns Observable returning the data
      */
-    loadEntity(type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
+    loadEntity(type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}/${id}`;
         request.open('GET', url, true);
 
-        const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         this.addHeaders(request, type, 'GET');
 
@@ -174,7 +174,7 @@ export class Http extends ExternalInterface {
     }
 
 
-    paginatedLoadCollection(type: string, options: CollectionOptionsInterface, paginator: CollectionPaginator, errorHandler: Function = null): Observable<CollectionDataSet> {
+    paginatedLoadCollection(type: string, options: CollectionOptionsInterface, paginator: CollectionPaginator<T>, errorHandler: Function = null): Observable<CollectionDataSet<T>> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         let url = `${this.apiUrl(type)}${type}`;
 
@@ -260,13 +260,13 @@ export class Http extends ExternalInterface {
 
         this.addHeaders(request, type, 'GET');
 
-        const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
+        const subject = new ReplaySubject<CollectionDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
                     const promise = this.extractCollection(request.responseText, paginator);
-                    promise.then((rest: CollectionDataSet) => {
+                    promise.then((rest) => {
                         subject.next(rest);
                     }).catch((error: any) => {
                         console.error(error);
@@ -291,7 +291,7 @@ export class Http extends ExternalInterface {
      * @param errorHandler Function used to handle errors
      * @returns Observable returning the collection data
      */
-    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet> {
+    loadCollection(type: string, filter: { [key: string]: any } = {}, errorHandler: Function = null): Observable<CollectionDataSet<T>> {
         const request: XMLHttpRequest = new XMLHttpRequest();
 
         let url = `${this.apiUrl(type)}${type}`;
@@ -320,13 +320,13 @@ export class Http extends ExternalInterface {
 
         this.addHeaders(request, type, 'GET');
 
-        const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<CollectionDataSet>(1);
+        const subject = new ReplaySubject<CollectionDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
                     const promise = this.extractCollection(request.responseText);
-                    promise.then((rest: CollectionDataSet) => {
+                    promise.then((rest) => {
                         subject.next(rest);
                     }).catch((error: any) => {
                         console.error(error);
@@ -352,14 +352,14 @@ export class Http extends ExternalInterface {
      * @param errorHandler Function used to handle errors
      * @returns Observable returning the entity data
      */
-    saveEntity(entity: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet> {
+    saveEntity(entity: EntityDataSet, type: string, id: number, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}/${id}`;
         request.open('PATCH', url, true);
 
         this.addHeaders(request, type, 'PATCH');
 
-        const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -385,14 +385,14 @@ export class Http extends ExternalInterface {
      * @param errorHandler Function used to handle errors
      * @returns Observable returning the entity data
      */
-    createEntity(type: string, data: EntityDataSet, errorHandler: Function = null): Observable<EntityDataSet> {
+    createEntity(type: string, data: EntityDataSet<any>, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         const request: XMLHttpRequest = new XMLHttpRequest();
         const url = `${this.apiUrl(type)}${type}`;
         request.open('POST', url, true);
 
         this.addHeaders(request, type, 'POST');
 
-        const subject: ReplaySubject<CollectionDataSet> = new ReplaySubject<EntityDataSet>(1);
+        const subject = new ReplaySubject<EntityDataSet<T>>(1);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
@@ -451,8 +451,8 @@ export class Http extends ExternalInterface {
      * @param errorHandler Function used to handle errors
      * @returns True if authentication success
      */
-    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet> {
-        const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    authenticate(login: string, password: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
@@ -460,7 +460,6 @@ export class Http extends ExternalInterface {
         request.open('GET', url, true);
 
         request.setRequestHeader('Authorization', 'Basic ' + btoa(login.trim() + ':' + password));
-
         const observables: Observable<any>[] = [];
 
         request.onreadystatechange = () => {
@@ -492,9 +491,14 @@ export class Http extends ExternalInterface {
 
                 combineLatest(...observables).pipe(map((values: any[]) => {
                     return values[0];
-                })).subscribe((data: EntityDataSet) => {
-                    subject.next(data);
-                });
+                })).subscribe(
+                    (data: EntityDataSet<T>) => {
+                        subject.next(data);
+                    },
+                    (err) => {
+                        subject.error(err);
+                    }
+                );
             }
         };
 
@@ -528,7 +532,7 @@ export class Http extends ExternalInterface {
     }
 
 
-    private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet> {
+    private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         if (accessToken && accessToken != '') {
             localStorage.setItem(`${this.interfaceName}_accessToken`, JSON.stringify(accessToken));
             this.headers['Authorization'] = 'Bearer ' + accessToken;
@@ -584,8 +588,8 @@ export class Http extends ExternalInterface {
     }
 
 
-    getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet> {
-        const subject: ReplaySubject<EntityDataSet> = new ReplaySubject<EntityDataSet>(1);
+    getMe(complete: boolean = true, errorHandler: Function = null): Observable<EntityDataSet<T>> {
+        const subject: ReplaySubject<EntityDataSet<T>> = new ReplaySubject<EntityDataSet<T>>(1);
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
@@ -634,7 +638,7 @@ export class Http extends ExternalInterface {
      * @param responseText Response text from server
      * @returns Entity data
      */
-    protected extractEntity(responseText: string): EntityDataSet {
+    protected extractEntity(responseText: string): EntityDataSet<T> {
         const data: any = JSON.parse(responseText);
 
         // pas sûr que ce code serve
@@ -656,14 +660,14 @@ export class Http extends ExternalInterface {
 
     /**
      * Extract collection data from raw data
-     * @param {string} responseText Response text from server
-     * @returns {CollectionDataSet} Collection data
+     * @param responseText Response text from server
+     * @returns Collection data
      */
-    protected extractCollection(responseText: string, paginator: CollectionPaginator = null): Promise<CollectionDataSet> {
+    protected extractCollection(responseText: string, paginator: CollectionPaginator<T> = null): Promise<CollectionDataSet<T>> {
         const data: any = JSON.parse(responseText);
-        const collectionData: CollectionDataSet = {};
+        const collectionData: CollectionDataSet<T> = {};
 
-        data.data.forEach((entityData: EntityDataSet) => {
+        data.data.forEach((entityData: EntityDataSet<T>) => {
             collectionData['_' + entityData.id] = entityData;
         });
 

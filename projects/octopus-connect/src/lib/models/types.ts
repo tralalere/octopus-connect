@@ -1,28 +1,17 @@
 /**
  * Entity raw data
  */
-export interface EntityDataSet {
-
-    /**
-     * Entity attributes, indexed by string
-     */
-    [key: string]: any;
-
-    /**
-     * Optional entity id
-     */
-    id?: number;
-}
+export type EntityDataSet<T = { [key: string]: any }> = T & { id?: number };
 
 /**
  * Collection raw data
  */
-export interface CollectionDataSet {
+export interface CollectionDataSet<T extends { [key: string]: any }> {
 
     /**
      * Entities data, indexed by id
      */
-    [key: number]: EntityDataSet;
+    [key: number]: EntityDataSet<T>;
 }
 
 /**

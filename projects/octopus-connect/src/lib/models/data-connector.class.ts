@@ -29,25 +29,25 @@ export class DataConnector {
      * Available interfaces
      * @type {{}} External interfaces, indexed by name
      */
-    private interfaces: { [key: string]: ExternalInterface } = {};
+    private interfaces: { [key: string]: ExternalInterface<any> } = {};
 
     /**
      * Entities store
      * @type {{}} Entities stores, indexed by endpoint name
      */
-    private entitiesLiveStore: { [key: string]: EntityStore } = {};
+    private entitiesLiveStore: { [key: string]: EntityStore<any> } = {};
 
     /**
      * Collections store
      * @type {{}} Collections stores, indexed by endpoint name
      */
-    private collectionsLiveStore: { [key: string]: CollectionStore } = {};
+    private collectionsLiveStore: { [key: string]: CollectionStore<any> } = {};
 
     /**
      * Server push listeners
      * @type {{}} Listeners, indexed by endpoint name
      */
-    private pushListeners: { [key: string]: Observable<DataEntity> } = {};
+    private pushListeners: { [key: string]: Observable<DataEntity<any>> } = {};
 
     /**
      *
@@ -56,7 +56,6 @@ export class DataConnector {
 
     /**
      * Built-in external interfaces
-     * @type {{}}
      */
     private builtInFactories: { [key: string]: any } = {
         localstorage: LocalStorage,
@@ -140,7 +139,7 @@ export class DataConnector {
      * @param type Endpoint name
      * @returns External interface
      */
-    private getInterface(type: string): ExternalInterface {
+    private getInterface<T extends { [key: string]: any }>(type: string): ExternalInterface<T> {
         const conf: string | EndpointConfig = this.getEndpointConfiguration(type);
 
         if (typeof conf === 'string') {
@@ -239,7 +238,7 @@ export class DataConnector {
      * @param id Id of the entity
      * @returns The observable associated to the entity
      */
-    private getEntityObservableInStore(type: string, id: number | string): Observable<DataEntity> {
+    private getEntityObservableInStore<T extends { [key: string]: any }>(type: string, id: number | string): Observable<DataEntity<T>> {
 
         if (this.entitiesLiveStore[type]) {
             return this.entitiesLiveStore[type].getEntityObservable(id);
@@ -256,7 +255,7 @@ export class DataConnector {
      * @param createIfNotExisted Create the observable if not existed
      * @returns The observable associated to the collection
      */
-    private getCollectionObservableInStore(type: string, filter: FilterData, useCache = false, createIfNotExisted = true): Observable<DataCollection> {
+    private getCollectionObservableInStore<T extends { [key: string]: any }>(type: string, filter: FilterData, useCache = false, createIfNotExisted = true): Observable<DataCollection<T>> {
         const isExisted: boolean = this.collectionsLiveStore[type] && this.collectionsLiveStore[type].isInStore(filter);
 
         if (isExisted || createIfNotExisted) {
@@ -273,13 +272,13 @@ export class DataConnector {
      * @param createObservable
      * @returns The observable associated to the entity
      */
-    private getEntitySubject(type: string, id: number | string, createObservable: boolean = false): ReplaySubject<DataEntity> {
+    private getEntitySubject<T extends { [key: string]: any }>(type: string, id: number | string, createObservable: boolean = false): ReplaySubject<DataEntity<T>> {
 
         if (!this.entitiesLiveStore[type]) {
-            this.entitiesLiveStore[type] = new EntityStore();
+            this.entitiesLiveStore[type] = new EntityStore<T>();
         }
 
-        return this.entitiesLiveStore[type].getEntityObservable(id, createObservable);
+        return this.entitiesLiveStore[type].getEntityObservable<T>(id, createObservable);
     }
 
     /**
@@ -290,7 +289,7 @@ export class DataConnector {
      * @param entityObservable Observable to register
      * @returns The observable associated to the entity
      */
-    registerEntity(type: string, id: number | string, entity: DataEntity, entityObservable: Observable<DataEntity>): Observable<DataEntity> {
+    registerEntity<T extends { [key: string]: any }>(type: string, id: number | string, entity: DataEntity<T>, entityObservable: Observable<DataEntity<T>>): Observable<DataEntity<T>> {
 
         if (!this.entitiesLiveStore[type]) {
             this.entitiesLiveStore[type] = new EntityStore();
@@ -305,7 +304,7 @@ export class DataConnector {
     }
 
 
-    registerEntityByData(type: string, id: number | string, entityData: EntityDataSet) {
+    registerEntityByData<T extends { [key: string]: any }>(type: string, id: number | string, entityData: EntityDataSet<T>) {
 
         if (!this.entitiesLiveStore[type]) {
             this.entitiesLiveStore[type] = new EntityStore();
@@ -315,18 +314,18 @@ export class DataConnector {
             this.collectionsLiveStore[type] = new CollectionStore();
         }
 
-        const entity: DataEntity = new DataEntity(type, entityData, this, id);
-        const obs: Observable<DataEntity> = this.getEntitySubject(type, id);
+        const entity = new DataEntity<T>(type, entityData, this, id);
+        const obs = this.getEntitySubject<T>(type, id);
 
         this.collectionsLiveStore[entity.type].registerEntityInCollections(entity, obs);
         this.entitiesLiveStore[type].registerEntity(entity, id);
 
         if (this.pushListeners[type]) {
-            (this.pushListeners[type] as Subject<DataEntity>).next(entity);
+            (this.pushListeners[type] as Subject<DataEntity<T>>).next(entity);
         }
     }
 
-    private registerCollectionEntities(type: string, collection: DataCollection): Observable<DataEntity>[] {
+    private registerCollectionEntities<T extends { [key: string]: any }>(type: string, collection: DataCollection<T>): Observable<DataEntity<T>>[] {
 
         if (!this.entitiesLiveStore[type]) {
             this.entitiesLiveStore[type] = new EntityStore();
@@ -336,11 +335,11 @@ export class DataConnector {
             this.collectionsLiveStore[type] = new CollectionStore();
         }
 
-        const entitiesObservables: Observable<DataEntity>[] = [];
+        const entitiesObservables: Observable<DataEntity<T>>[] = [];
 
-        collection.entities.forEach((entity: DataEntity) => {
+        collection.entities.forEach((entity) => {
 
-            const entityObservable: Observable<DataEntity> = this.getEntitySubject(type, entity.id);
+            const entityObservable = this.getEntitySubject(type, entity.id);
 
             this.collectionsLiveStore[entity.type].registerEntityInCollections(entity, entityObservable, false);
             entitiesObservables.push(this.entitiesLiveStore[type].registerEntity(entity, entity.id));
@@ -350,7 +349,7 @@ export class DataConnector {
     }
 
 
-    private replaceCollectionEntities(type: string, collection: DataCollection, filter: FilterData): Observable<DataEntity>[] {
+    private replaceCollectionEntities<T extends { [key: string]: any }>(type: string, collection: DataCollection<T>, filter: FilterData): Observable<DataEntity<T>>[] {
 
         if (!this.entitiesLiveStore[type]) {
             this.entitiesLiveStore[type] = new EntityStore();
@@ -362,11 +361,11 @@ export class DataConnector {
 
         this.collectionsLiveStore[type].clearEntities(filter);
 
-        const entitiesObservables: Observable<DataEntity>[] = [];
+        const entitiesObservables: Observable<DataEntity<T>>[] = [];
 
-        collection.entities.forEach((entity: DataEntity) => {
+        collection.entities.forEach((entity) => {
 
-            const entityObservable: Observable<DataEntity> = this.getEntitySubject(type, entity.id);
+            const entityObservable = this.getEntitySubject(type, entity.id);
 
             this.collectionsLiveStore[entity.type].registerEntityInCollections(entity, entityObservable, false);
             entitiesObservables.push(this.entitiesLiveStore[type].registerEntity(entity, entity.id));
@@ -381,7 +380,7 @@ export class DataConnector {
      * @param id Id of the entity
      * @param subject Subject to associate
      */
-    private registerEntitySubject(type: string, id: number, subject: ReplaySubject<DataEntity>) {
+    private registerEntitySubject<T extends { [key: string]: any }>(type: string, id: number, subject: ReplaySubject<DataEntity<T>>) {
 
         if (!this.entitiesLiveStore[type]) {
             this.entitiesLiveStore[type] = new EntityStore();
@@ -397,7 +396,7 @@ export class DataConnector {
      * @param useCache
      * @returns Observable associated to the collection
      */
-    private getCollectionObservable(type: string, filter: FilterData, useCache = false): Subject<DataCollection> {
+    private getCollectionObservable<T extends { [key: string]: any }>(type: string, filter: FilterData, useCache = false): Subject<DataCollection<T>> {
 
         if (!this.collectionsLiveStore[type]) {
             this.collectionsLiveStore[type] = new CollectionStore();
@@ -414,7 +413,7 @@ export class DataConnector {
      * @param refresh
      * @returns The observable associated to the collection
      */
-    private registerCollection(type: string, filter: FilterData, collection: DataCollection, refresh: boolean = true): Observable<DataCollection> {
+    private registerCollection<T extends { [key: string]: any }>(type: string, filter: FilterData, collection: DataCollection<T>, refresh: boolean = true): Observable<DataCollection<T>> {
 
         if (!this.collectionsLiveStore[type]) {
             this.collectionsLiveStore[type] = new CollectionStore();
@@ -427,7 +426,7 @@ export class DataConnector {
         }
 
 
-        const obs: Observable<DataCollection> = this.collectionsLiveStore[type].registerCollection(collection, filter);
+        const obs: Observable<DataCollection<T>> = this.collectionsLiveStore[type].registerCollection(collection, filter);
 
         // refresh de la collection
         if (refresh) {
@@ -438,14 +437,14 @@ export class DataConnector {
     }
 
 
-    private paginatedRegisterCollection(type: string, filter: FilterData, collection: DataCollection, refresh: boolean = true): Observable<DataCollection> {
+    private paginatedRegisterCollection<T extends { [key: string]: any }>(type: string, filter: FilterData, collection: DataCollection<T>, refresh: boolean = true): Observable<DataCollection<T>> {
         if (!this.collectionsLiveStore[type]) {
             this.collectionsLiveStore[type] = new CollectionStore();
         }
 
         collection.entitiesObservables = this.registerCollectionEntities(type, collection);
 
-        const obs: Observable<DataCollection> = this.collectionsLiveStore[type].registerCollection(collection, filter);
+        const obs = this.collectionsLiveStore[type].registerCollection(collection, filter);
 
         // refresh de la collection
         if (refresh) {
@@ -461,35 +460,35 @@ export class DataConnector {
      * @param login User login
      * @param password User password
      */
-    authenticate(serviceName: string, login: string, password: string): Observable<DataEntity> {
-        const selectedInterface: ExternalInterface = this.interfaces[serviceName];
+    authenticate<T extends { [key: string]: any }>(serviceName: string, login: string, password: string): Observable<DataEntity<T>> {
+        const selectedInterface= this.interfaces[serviceName];
 
-        const subject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+        const subject = new ReplaySubject<DataEntity<T>>(1);
 
-        const errorHandler: Function = (error: InterfaceError) => {
+        const errorHandler = (error: InterfaceError) => {
             this.sendMessage(error);
             subject.error(error);
         };
 
-        selectedInterface.authenticate(login, password, errorHandler).pipe(map((data: EntityDataSet) => {
+        selectedInterface.authenticate(login, password, errorHandler).pipe(map((data) => {
             this.sendMessage();
-            return new DataEntity('users', data, this, data.id);
-        })).subscribe((entity: DataEntity) => {
+            return new DataEntity<T>('users', data, this, data.id);
+        })).subscribe((entity) => {
             subject.next(entity);
         });
 
         return subject;
     }
 
-    authenticated(serviceName: string): Observable<DataEntity> {
-        const selectedInterface: ExternalInterface = this.interfaces[serviceName];
-        return selectedInterface.authenticated.pipe(map((data: EntityDataSet) => {
-            return new DataEntity('users', data, this, data.id);
+    authenticated<T extends { [key: string]: any }>(serviceName: string) {
+        const selectedInterface = this.interfaces[serviceName];
+        return selectedInterface.authenticated.pipe(map((data) => {
+            return new DataEntity<T>('users', data, this, data.id);
         }));
     }
 
     logout(serviceName: string): Observable<boolean> {
-        const selectedInterface: ExternalInterface = this.interfaces[serviceName];
+        const selectedInterface= this.interfaces[serviceName];
         this.clear();
         return selectedInterface.logout();
     }
@@ -517,9 +516,9 @@ export class DataConnector {
      * @param type Endpoint name
      * @returns DataEntity observable associated to this entity
      */
-    public listen(type: string): Observable<DataEntity> {
+    public listen<T extends { [key: string]: any }>(type: string) {
         if (!this.pushListeners[type]) {
-            this.pushListeners[type] = new Subject<DataEntity>();
+            this.pushListeners[type] = new Subject<DataEntity<T>>();
         }
 
         return this.pushListeners[type];
@@ -531,45 +530,45 @@ export class DataConnector {
      * @param id Entity id
      * @returns DataEntity observable associated to this entity
      */
-    loadEntity(type: string, id: number | string): Observable<DataEntity> {
+    loadEntity<T extends { [key: string]: any }>(type: string, id: number | string): Observable<DataEntity<T>> {
 
         if (this.useCache(type)) {
-            const obs: Observable<DataEntity> = this.getEntityObservableInStore(type, id);
+            const obs = this.getEntityObservableInStore<T>(type, id);
 
             if (obs) {
                 return obs;
             }
         }
 
-        const selectedInterface: ExternalInterface = this.getInterface(type);
+        const selectedInterface= this.getInterface<T>(type);
 
         let count = 0;
 
-        let entityData: EntityDataSet | Observable<EntityDataSet>;
+        let entityData: EntityDataSet<T> | Observable<EntityDataSet<T>>;
 
         if (selectedInterface) {
 
-            const entitySubject: ReplaySubject<DataEntity> = this.getEntitySubject(type, id, true);
+            const entitySubject: ReplaySubject<DataEntity<T>> = this.getEntitySubject(type, id, true);
             const structure: ModelSchema = this.getEndpointStructureModel(type);
 
             const embeddings: { [key: string]: string } = this.getEmbeddings(type);
 
-            const checkResponse: Function = () => {
+            const checkResponse = () => {
 
                 this.sendMessage();
 
                 if (entityData instanceof Observable) {
-                    entityData.subscribe((entity: EntityDataSet) => {
+                    entityData.subscribe((entity) => {
 
                         if (entity) {
                             if (structure) {
-                                entity = structure.filterModel(entity);
+                                entity = structure.filterModel(entity) as EntityDataSet<T>;
                             }
 
                             // hasNesting ?
                             // let nested:{[key:string]:string} = this.getNesting(type);
 
-                            this.registerEntity(type, id, new DataEntity(type, entity, this, id, embeddings), entitySubject);
+                            this.registerEntity(type, id, new DataEntity<T>(type, entity, this, id, embeddings), entitySubject);
                         }
 
                     });
@@ -577,10 +576,10 @@ export class DataConnector {
 
                     if (entityData) {
                         if (structure) {
-                            entityData = structure.filterModel(entityData);
+                            entityData = structure.filterModel(entityData) as EntityDataSet<T>;
                         }
 
-                        const newEntity: DataEntity = new DataEntity(type, entityData, this, id, embeddings);
+                        const newEntity = new DataEntity<T>(type, entityData, this, id, embeddings);
 
                         // hasNesting ?
                         /*let nested:{[key:string]:string} = this.getNesting(type);
@@ -651,13 +650,13 @@ export class DataConnector {
      * @param ids Entities ids array
      * @returns The data entities
      */
-    loadEntities(type: string, ids: number[]): Observable<DataEntity[]> {
+    loadEntities<T extends { [key: string]: any }>(type: string, ids: number[]): Observable<DataEntity<T>[]> {
 
         // TODO: check si une méthode loadEntities optimisée existe dans l'interface
 
         // TODO: Pourrait retourner un objet indexé par id plutôt qu'un Array
 
-        const observables: Observable<DataEntity>[] = [];
+        const observables: Observable<DataEntity<T>>[] = [];
 
         ids.forEach((id: number) => {
             observables.push(this.loadEntity(type, id));
@@ -667,15 +666,15 @@ export class DataConnector {
     }
 
 
-    paginatedLoadCollection(type: string, options: CollectionOptionsInterface): PaginatedCollection {
-        const paginator: CollectionPaginator = new CollectionPaginator(this, type, options, options.filter);
+    paginatedLoadCollection<T extends { [key: string]: any }>(type: string, options: CollectionOptionsInterface): PaginatedCollection<T> {
+        const paginator = new CollectionPaginator<T>(this, type, options, options.filter);
         return this.paginatedLoadCollectionExec(type, options.filter || {}, paginator);
     }
 
 
-    paginatedLoadCollectionExec(type: string, filter: { [key: string]: any }, paginator: CollectionPaginator): PaginatedCollection {
+    paginatedLoadCollectionExec<T extends { [key: string]: any }>(type: string, filter: { [key: string]: any }, paginator: CollectionPaginator<T>): PaginatedCollection<T> {
 
-        const selectedInterface: ExternalInterface = this.getInterface(type);
+        const selectedInterface = this.getInterface<T>(type);
         const structure: ModelSchema = this.getEndpointStructureModel(type);
 
         let count = 0;
@@ -683,30 +682,30 @@ export class DataConnector {
         const embeddings: { [key: string]: string } = this.getEmbeddings(type);
 
         if (selectedInterface) {
-            const collectionSubject: Subject<DataCollection> = this.getCollectionObservable(type, filter);
-            let collection: CollectionDataSet | Observable<CollectionDataSet>;
+            const collectionSubject = this.getCollectionObservable<T>(type, filter);
+            let collection: CollectionDataSet<T> | Observable<CollectionDataSet<T>>;
 
-            const checkResponse: Function = () => {
+            const checkResponse = () => {
 
                 this.sendMessage();
 
                 if (collection instanceof Observable) {
 
-                    collection.subscribe((newCollection: CollectionDataSet) => {
+                    collection.subscribe((newCollection) => {
                         // ici ?
-                        const coll: DataCollection = new DataCollection(type, newCollection, this, structure, embeddings);
+                        const coll = new DataCollection<T>(type, newCollection, this, structure, embeddings);
                         coll.paginated = true;
                         this.registerCollection(type, filter, coll);
                     });
                 } else {
                     // et là ??
-                    const coll: DataCollection = new DataCollection(type, collection, this, structure, embeddings);
+                    const coll = new DataCollection<T>(type, collection, this, structure, embeddings);
                     coll.paginated = true;
                     this.registerCollection(type, filter, coll);
                 }
             };
 
-            const errorHandler: Function = (error: InterfaceError) => {
+            const errorHandler = (error: InterfaceError) => {
                 const msg = `Error loading collection of type '${type}' with data ${JSON.stringify(filter)}`;
                 console.warn(msg);
                 error.message = msg;
@@ -761,22 +760,22 @@ export class DataConnector {
 
     /**
      * Load collection from specified endpoint
-     * @param {string} type Endpoint name
-     * @param {FilterData} filter Filter object
-     * @returns {Observable<DataCollection>} Observable associated to this collection
+     * @param type Endpoint name
+     * @param filter Filter object
+     * @returns Observable associated to this collection
      */
-    loadCollection(type: string, filter: FilterData = {}): Observable<DataCollection> {
+    loadCollection<T extends { [key: string]: any }>(type: string, filter: FilterData = {}): Observable<DataCollection<T>> {
         const useCache = this.useCache(type);
 
         if (useCache) {
-            const obs: Observable<DataCollection> = this.getCollectionObservableInStore(type, filter, useCache);
+            const obs = this.getCollectionObservableInStore<T>(type, filter, useCache);
 
             if (obs) {
                 return obs;
             }
         }
 
-        const selectedInterface: ExternalInterface = this.getInterface(type);
+        const selectedInterface = this.getInterface<T>(type);
         const structure: ModelSchema = this.getEndpointStructureModel(type);
 
         let count = 0;
@@ -784,25 +783,25 @@ export class DataConnector {
         const embeddings: { [key: string]: string } = this.getEmbeddings(type);
 
         if (selectedInterface) {
-            const collectionSubject: Subject<DataCollection> = this.getCollectionObservable(type, filter, useCache);
-            let collection: CollectionDataSet | Observable<CollectionDataSet>;
+            const collectionSubject = this.getCollectionObservable<T>(type, filter, useCache);
+            let collection: CollectionDataSet<T> | Observable<CollectionDataSet<T>>;
 
-            const checkResponse: Function = () => {
+            const checkResponse = () => {
 
                 this.sendMessage();
 
                 if (collection instanceof Observable) {
 
                     // attention, dans le cas de nodeJs, on ne doit pas faire de take(1)
-                    collection.subscribe((newCollection: CollectionDataSet) => {
-                        this.registerCollection(type, filter, new DataCollection(type, newCollection, this, structure, embeddings));
+                    collection.subscribe((newCollection) => {
+                        this.registerCollection(type, filter, new DataCollection<T>(type, newCollection, this, structure, embeddings));
                     });
                 } else {
-                    this.registerCollection(type, filter, new DataCollection(type, collection, this, structure, embeddings));
+                    this.registerCollection(type, filter, new DataCollection<T>(type, collection, this, structure, embeddings));
                 }
             };
 
-            const errorHandler: Function = (error: InterfaceError) => {
+            const errorHandler = (error: InterfaceError) => {
                 const msg = `Error loading collection of type '${type}' with data ${JSON.stringify(filter)}`;
                 console.warn(msg);
                 error.message = msg;
@@ -872,17 +871,17 @@ export class DataConnector {
 
     /**
      * Save entity
-     * @param {DataEntity} entity Entity to save
-     * @param {boolean} forceReload whether to reload data if nothing is saved or not
-     * @param {boolean} dispatchBeforeResponse register entity before save happens
-     * @returns {Observable<DataEntity>} Observable associated to the entity
+     * @param entity Entity to save
+     * @param forceReload whether to reload data if nothing is saved or not
+     * @param dispatchBeforeResponse register entity before save happens
+     * @returns Observable associated to the entity
      */
-    saveEntity(entity: DataEntity, forceReload: boolean = false, dispatchBeforeResponse: boolean = false): Observable<DataEntity> {
+    saveEntity<T extends { [key: string]: any }>(entity: DataEntity<T>, forceReload: boolean = false, dispatchBeforeResponse: boolean = false): Observable<DataEntity<T>> {
 
-        const selectedInterface: ExternalInterface = this.getInterface(entity.type);
+        const selectedInterface = this.getInterface<T>(entity.type);
         const structure: ModelSchema = this.getEndpointStructureModel(entity.type);
 
-        let dataToSave: EntityDataSet;
+        let dataToSave: EntityDataSet<T>;
 
         if (selectedInterface.useDiff) {
             dataToSave = entity.getDiff();
@@ -900,11 +899,11 @@ export class DataConnector {
 
         // let entitySubject:ReplaySubject<DataEntity> = this.getEntitySubject(entity.type, entity.id);
 
-        const entitySubject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+        const entitySubject = new ReplaySubject<DataEntity<T>>(1);
 
         let count = 0;
 
-        let entityData: EntityDataSet | Observable<EntityDataSet>;
+        let entityData: EntityDataSet<T> | Observable<EntityDataSet<T>>;
 
         const embeddings: { [key: string]: string } = this.getEmbeddings(entity.type);
 
@@ -912,19 +911,19 @@ export class DataConnector {
             this.registerEntity(entity.type, entity.id, entity, entitySubject);
         }
 
-        const checkResponse: Function = () => {
+        const checkResponse = () => {
 
             this.sendMessage();
 
             if (entityData instanceof Observable) {
-                entityData.subscribe((saveEntity: EntityDataSet) => {
+                entityData.subscribe((saveEntity) => {
 
                     if (structure) {
-                        saveEntity = structure.filterModel(saveEntity);
+                        saveEntity = structure.filterModel(saveEntity) as EntityDataSet<T>;
                     }
 
 
-                    const ent: DataEntity = new DataEntity(entity.type, saveEntity, this, entity.id, embeddings);
+                    const ent: DataEntity<T> = new DataEntity<T>(entity.type, saveEntity, this, entity.id, embeddings);
                     entitySubject.next(ent);
                     this.registerEntity(entity.type, entity.id, ent, entitySubject);
                     this.sendReloadNotification(entity.type, saveEntity);
@@ -932,10 +931,10 @@ export class DataConnector {
             } else {
 
                 if (structure) {
-                    entityData = structure.filterModel(entityData);
+                    entityData = structure.filterModel(entityData) as EntityDataSet<T>;
                 }
 
-                const ent: DataEntity = new DataEntity(entity.type, entityData, this, entity.id, embeddings);
+                const ent: DataEntity<T> = new DataEntity<T>(entity.type, entityData, this, entity.id, embeddings);
                 entitySubject.next(ent);
                 this.registerEntity(entity.type, entity.id, ent, entitySubject);
                 this.sendReloadNotification(entity.type, entityData);
@@ -944,7 +943,7 @@ export class DataConnector {
 
         };
 
-        const errorHandler: Function = (error: InterfaceError) => {
+        const errorHandler = (error: InterfaceError) => {
             const msg = `Error saving entity of type '${entity.type}' with id ${entity.id}`;
             console.warn(msg);
 
@@ -981,9 +980,9 @@ export class DataConnector {
             entityData = selectedInterface.saveEntity(dataToSave, entity.type, entity.id, errorHandler);
             checkResponse();
         } else if (forceReload) {
-            this.loadEntity(entity.type, entity.id).pipe(
+            this.loadEntity<T>(entity.type, entity.id).pipe(
                 take(1))
-                .subscribe((newEntity: DataEntity) => {
+                .subscribe((newEntity) => {
                     entitySubject.next(newEntity);
                 });
         } else {
@@ -995,17 +994,17 @@ export class DataConnector {
 
     /**
      * Create entity to the specified endpoint service
-     * @param {string} type Endpoint name
-     * @param {EntityDataSet} data Data used to create the entity
-     * @returns {Observable<DataEntity>} The observable associated to this entity
+     * @param type Endpoint name
+     * @param data Data used to create the entity
+     * @returns The observable associated to this entity
      */
-    createEntity(type: string, data: { [key: string]: any } = {}, sendNotification: boolean = true): Observable<DataEntity> {
-        const selectedInterface: ExternalInterface = this.getInterface(type);
+    createEntity<T = {[key: string]: any}>(type: string, data: any = {}, sendNotification = true): Observable<DataEntity<T>> {
+        const selectedInterface = this.getInterface<T>(type);
 
         const structure: ModelSchema = this.getEndpointStructureModel(type);
 
         if (structure) {
-            data = structure.generateModel(null, data);
+            data = structure.generateModel(null, data) as T;
         }
 
         const exclusions: string[] = this.getExclusions(type);
@@ -1016,21 +1015,26 @@ export class DataConnector {
             }
         });
 
-        const entitySubject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+        const entitySubject: ReplaySubject<DataEntity<T>> = new ReplaySubject<DataEntity<T>>(1);
         let count = 0;
 
-        let entity: EntityDataSet | Observable<EntityDataSet>;
+        let entity: EntityDataSet<T> | Observable<EntityDataSet<T>>;
 
-        const embeddings: { [key: string]: string } = this.getEmbeddings(type);
+        const embeddings = this.getEmbeddings(type);
 
-        const checkResponse: Function = () => {
+        const checkResponse = () => {
 
             this.sendMessage();
 
             if (entity instanceof Observable) {
-                entity.subscribe((createdEntity: EntityDataSet) => {
+                entity.subscribe((createdEntity) => {
                     this.registerEntitySubject(type, createdEntity.id, entitySubject);
-                    this.registerEntity(type, createdEntity.id, new DataEntity(type, createdEntity, this, createdEntity.id, embeddings), entitySubject);
+                    this.registerEntity(
+                        type,
+                        createdEntity.id,
+                        new DataEntity(type, createdEntity, this, createdEntity.id, embeddings),
+                        entitySubject
+                    );
 
                     if (sendNotification) {
                         this.sendReloadNotification(type, createdEntity);
@@ -1038,7 +1042,7 @@ export class DataConnector {
                 });
             } else {
                 this.registerEntitySubject(type, entity.id, entitySubject);
-                this.registerEntity(type, entity.id, new DataEntity(type, entity, this, entity.id, embeddings), entitySubject);
+                this.registerEntity(type, entity.id, new DataEntity<T>(type, entity, this, entity.id, embeddings), entitySubject);
 
                 if (sendNotification) {
                     this.sendReloadNotification(type, entity);
@@ -1048,7 +1052,7 @@ export class DataConnector {
 
         };
 
-        const errorHandler: Function = (error: InterfaceError) => {
+        const errorHandler = (error: InterfaceError) => {
             const msg = `Error creating entity of type '${type}'`;
             console.warn(msg);
 
@@ -1080,20 +1084,20 @@ export class DataConnector {
 
     /**
      * Creates an entity on the front only (will be saved on the server later)
-     * @param {string} type Endpoint type
-     * @param {{[p: string]: any}} data Data used to create the entity
-     * @returns {Observable<DataEntity>} The observable associated to this entity
+     * @param type Endpoint type
+     * @param data Data used to create the entity
+     * @returns The observable associated to this entity
      */
-    createTemporaryEntity(type: string, data: { [key: string]: any } = {}): Observable<DataEntity> {
+    createTemporaryEntity<T extends { [key: string]: any }>(type: string, data: EntityDataSet<T> = {} as T): Observable<DataEntity<T>> {
         const structure: ModelSchema = this.getEndpointStructureModel(type);
 
         if (structure) {
-            data = structure.generateModel(null, data);
+            data = structure.generateModel(null, data) as T;
         }
 
-        const entitySubject: ReplaySubject<DataEntity> = new ReplaySubject<DataEntity>(1);
+        const entitySubject: ReplaySubject<DataEntity<T>> = new ReplaySubject<DataEntity<T>>(1);
 
-        const entity: DataEntity = new DataEntity(type, data, this, -1);
+        const entity: DataEntity<T> = new DataEntity<T>(type, data, this, -1);
 
         // pas utile
         // entitySubject.next(entity);
@@ -1107,16 +1111,16 @@ export class DataConnector {
 
     /**
      * Delete an entity
-     * @param {DataEntity} entity Entity to delete
-     * @returns {Observable<boolean>} True if deletion success
+     * @param entity Entity to delete
+     * @returns True if deletion success
      */
-    deleteEntity(entity: DataEntity): Observable<boolean> {
-        const selectedInterface: ExternalInterface = this.getInterface(entity.type);
+    deleteEntity<T extends { [key: string]: any }>(entity: DataEntity<T>): Observable<boolean> {
+        const selectedInterface = this.getInterface(entity.type);
 
         const subject: ReplaySubject<boolean> = new ReplaySubject<boolean>(1);
         let count = 0;
 
-        const checkResponse: Function = () => {
+        const checkResponse = () => {
 
             this.sendMessage();
 
@@ -1140,7 +1144,7 @@ export class DataConnector {
 
         let result: boolean | Observable<boolean>;
 
-        const errorHandler: Function = (error: InterfaceError) => {
+        const errorHandler = (error: InterfaceError) => {
             const msg = `Error deleting entity of type '${entity.type}' with id ${entity.id}`;
             console.warn(msg);
 
@@ -1175,9 +1179,9 @@ export class DataConnector {
 
     /**
      * Delete entity from store
-     * @param {DataEntity} entity Entity to delete
+     * @param entity Entity to delete
      */
-    unregisterEntity(entity: DataEntity) {
+    unregisterEntity<T extends { [key: string]: any }>(entity: DataEntity<T>) {
         if (this.collectionsLiveStore[entity.type]) {
             this.collectionsLiveStore[entity.type].deleteEntityFromCollection(entity);
         }
@@ -1187,26 +1191,20 @@ export class DataConnector {
         }
     }
 
+    unregisterEntityTypeAndId<T extends { [key: string]: any }>(type: string, id: number | string) {
 
-    /**
-     *
-     * @param {string} type
-     * @param {number | string} id
-     */
-    unregisterEntityTypeAndId(type: string, id: number | string) {
-
-        this.entitiesLiveStore[type].getEntityObservable(id).pipe(take(1)).subscribe((entity: DataEntity) => {
+        this.entitiesLiveStore[type].getEntityObservable<T>(id).pipe(take(1)).subscribe((entity) => {
             this.unregisterEntity(entity);
         });
     }
 
     /**
      * Refresh entity (from refresh service)
-     * @param {string} type Endpoint name
-     * @param {number} id Entity id
+     * @param type Endpoint name
+     * @param id Entity id
      */
-    refreshEntity(type: string, id: number) {
-        const selectedInterface: ExternalInterface = this.getInterface(type);
+    refreshEntity<T extends { [key: string]: any }>(type: string, id: number) {
+        const selectedInterface = this.getInterface<T>(type);
 
         if (this.entitiesLiveStore[type] && this.entitiesLiveStore[type].isInStore(id)) {
             this.loadEntity(type, id);
@@ -1215,11 +1213,11 @@ export class DataConnector {
 
     /**
      * Refresh collection (from refresh service)
-     * @param {string} type Endpoint name
-     * @param {FilterData} filter Collection filter object
+     * @param type Endpoint name
+     * @param filter Collection filter object
      */
     refreshCollection(type: string, filter: FilterData) {
-        // let selectedInterface:ExternalInterface = this.getInterface(type);
+        // let selectedInterface:ExternalInterface = this.getInterface<T>(type);
 
         if (this.collectionsLiveStore[type] && this.collectionsLiveStore[type].isInStore(filter)) {
             this.loadCollection(type, filter);
@@ -1239,7 +1237,7 @@ export class DataConnector {
     }
 
     refreshCollectionWithData(type: string, data: Object) {
-        const store: CollectionStore = this.collectionsLiveStore[type];
+        const store = this.collectionsLiveStore[type];
         const conf: string | EndpointConfig = this.getEndpointConfiguration(type);
 
         if (conf && typeof conf === 'object' && store) {
@@ -1256,7 +1254,7 @@ export class DataConnector {
     }
 
     refreshAllCollectionsOfType(type: string) {
-        const store: CollectionStore = this.collectionsLiveStore[type];
+        const store = this.collectionsLiveStore[type];
         const conf: string | EndpointConfig = this.getEndpointConfiguration(type);
 
         if (conf && typeof conf === 'object' && store) {
@@ -1269,8 +1267,8 @@ export class DataConnector {
         }
     }
 
-    public getUnexpectedLogoutSubject(serviceName: string): Subject<null> {
-        const selectedInterface: ExternalInterface = this.interfaces[serviceName];
+    public getUnexpectedLogoutSubject(serviceName: string) {
+        const selectedInterface = this.interfaces[serviceName];
         return selectedInterface.unexpectedLogoutSubject;
     }
 }

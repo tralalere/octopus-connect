@@ -255,7 +255,12 @@ export class DataConnector {
      * @param createIfNotExisted Create the observable if not existed
      * @returns The observable associated to the collection
      */
-    private getCollectionObservableInStore<T extends { [key: string]: any }>(type: string, filter: FilterData, useCache = false, createIfNotExisted = true): Observable<DataCollection<T>> {
+    private getCollectionObservableInStore<T extends { [key: string]: any }>(
+        type: string,
+        filter: FilterData,
+        useCache = false,
+        createIfNotExisted = true
+    ): Observable<DataCollection<T>> {
         const isExisted: boolean = this.collectionsLiveStore[type] && this.collectionsLiveStore[type].isInStore(filter);
 
         if (isExisted || createIfNotExisted) {
@@ -998,7 +1003,7 @@ export class DataConnector {
      * @param data Data used to create the entity
      * @returns The observable associated to this entity
      */
-    createEntity<T = {[key: string]: any}>(type: string, data: any = {}, sendNotification = true): Observable<DataEntity<T>> {
+    createEntity<T extends {[key: string]: any} = {[key: string]: any}>(type: string, data: any = {}, sendNotification = true): Observable<DataEntity<T>> {
         const selectedInterface = this.getInterface<T>(type);
 
         const structure: ModelSchema = this.getEndpointStructureModel(type);

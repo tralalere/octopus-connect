@@ -1,6 +1,6 @@
 # OctopusConnect
 
-This project targets [Angular CLI](https://github.com/angular/angular-cli) version 18 only.
+This project targets [Angular CLI](https://github.com/angular/angular-cli) version 19 only.
 
 ## Development server
 

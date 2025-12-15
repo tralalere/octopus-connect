@@ -1,6 +1,6 @@
 # OctopusConnect
 
-This library is compatible with [Angular CLI](https://github.com/angular/angular-cli) version 18.
+This library is compatible with [Angular CLI](https://github.com/angular/angular-cli) version 19.
 
 ## Code scaffolding
 

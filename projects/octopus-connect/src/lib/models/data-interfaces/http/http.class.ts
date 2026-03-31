@@ -114,6 +114,21 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
         }
     }
 
+    /**
+     * to avoid json error on front if no value
+     */
+    private safeJsonParse(responseText: string): any {
+        if (!responseText) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(responseText);
+        } catch (error) {
+            return { raw: responseText };
+        }
+    }
+
     private apiUrl(endpointName: string): string {
 
         const useApi: boolean = !this.configuration.useApiExtension === false;
@@ -162,7 +177,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     this.sendError(request.status, request.statusText, errorHandler, {
                         entityType: type,
                         entityId: id,
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -273,7 +288,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -333,7 +348,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -367,7 +382,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(this.extractEntity(request.responseText));
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -400,7 +415,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(this.extractEntity(request.responseText));
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -433,7 +448,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(true);
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -485,7 +500,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     }
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
 
@@ -572,7 +587,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(userData);
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -608,7 +623,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                 } else {
                     if (errorHandler) {
                         this.sendError(request.status, request.statusText, errorHandler, {
-                            response: JSON.parse(request.responseText)
+                            response: this.safeJsonParse(request.responseText)
                         });
                     }
 

@@ -100,7 +100,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
 
         for (const headerName in this.headers) {
             if (this.headers.hasOwnProperty(headerName)) {
-                if (headerName.toLocaleLowerCase() === 'access-token' && isAuthFree) {
+                if (headerName.toLocaleLowerCase() === 'authorization' && isAuthFree) {
                     // do nothing to avoid access-token header
                 } else if (headerName.toLocaleLowerCase() === 'content-type'
                     && isShouldBePreflightProof
@@ -111,6 +111,21 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     request.setRequestHeader(headerName, this.headers[headerName]);
                 }
             }
+        }
+    }
+
+    /**
+     * to avoid json error on front if no value
+     */
+    private safeJsonParse(responseText: string): any {
+        if (!responseText) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(responseText);
+        } catch (error) {
+            return { raw: responseText };
         }
     }
 
@@ -162,7 +177,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     this.sendError(request.status, request.statusText, errorHandler, {
                         entityType: type,
                         entityId: id,
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -273,7 +288,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -333,7 +348,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     });
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -367,7 +382,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(this.extractEntity(request.responseText));
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -400,7 +415,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(this.extractEntity(request.responseText));
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -433,7 +448,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     subject.next(true);
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -456,7 +471,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
-        const url = `${this.configuration.apiUrl as string}api/login-token`;
+        const url = `${this.configuration.apiUrl as string}jwt/token`;
         request.open('GET', url, true);
 
         request.setRequestHeader('Authorization', 'Basic ' + btoa(login.trim() + ':' + password));
@@ -465,8 +480,12 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    const loginData: any = JSON.parse(request.responseText);
-                    const expire: number = +loginData.expires_in - 3600;
+                    let loginData: any = JSON.parse(request.responseText);
+                    loginData.access_token = loginData.token;
+                    loginData.refresh_token = loginData.token;
+                    const tokenInfo = atob(loginData.token.split('.')[1])
+                    const decodedToken = JSON.parse(tokenInfo);
+                    const expire = decodedToken.exp - Math.floor(Date.now() / 1000);
                     if (expire < 3600) {
                         if (localStorage.getItem(`${this.interfaceName}_accessToken`)) {
                             observables.push(this.setToken(loginData.access_token, errorHandler));
@@ -481,7 +500,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                     }
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
 
@@ -518,8 +537,8 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
         localStorage.removeItem(`${this.interfaceName}_accessToken`);
         localStorage.removeItem(`${this.interfaceName}_expires_in`);
         localStorage.removeItem(`${this.interfaceName}_refreshToken`);
-        if (this.headers.hasOwnProperty('access-token')) {
-            delete this.headers['access-token'];
+        if (this.headers.hasOwnProperty('Authorization')) {
+            delete this.headers['Authorization'];
         }
 
         this.dataStore.user = null;
@@ -531,7 +550,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
     private setToken(accessToken: string, errorHandler: Function = null): Observable<EntityDataSet<T>> {
         if (accessToken && accessToken != '') {
             localStorage.setItem(`${this.interfaceName}_accessToken`, JSON.stringify(accessToken));
-            this.headers['access-token'] = accessToken;
+            this.headers['Authorization'] = 'Bearer ' + accessToken;
 
             return this.getMe(true, errorHandler);
         }
@@ -548,20 +567,27 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
 
         const request: XMLHttpRequest = new XMLHttpRequest();
 
-        const url = `${this.configuration.apiUrl as string}api/refresh-token/${refreshToken}`;
+        const url = `${this.configuration.apiUrl as string}jwt/token`;
         request.open('GET', url, true);
+        request.setRequestHeader('Authorization', 'Bearer ' + refreshToken);
 
         request.onreadystatechange = () => {
             if (request.readyState === XMLHttpRequest.DONE) {
                 if (request.status === 200) {
-                    const userData: any = JSON.parse(request.responseText);
+                    let userData: any = JSON.parse(request.responseText);
+                    userData.access_token = userData.token;
+                    userData.refresh_token = userData.token;
+                    const tokenInfo = atob(userData.token.split('.')[1])
+                    const decodedToken = JSON.parse(tokenInfo);
+                    const expire = decodedToken.exp - Math.floor(Date.now() / 1000);
+
                     this.setToken(userData.access_token, errorHandler);
-                    this.setExpireDate(+userData.expires_in - 3600);
+                    this.setExpireDate(+expire);
                     this.setRefreshToken(userData.refresh_token);
                     subject.next(userData);
                 } else {
                     this.sendError(request.status, request.statusText, errorHandler, {
-                        response: JSON.parse(request.responseText)
+                        response: this.safeJsonParse(request.responseText)
                     });
                 }
             }
@@ -597,7 +623,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
                 } else {
                     if (errorHandler) {
                         this.sendError(request.status, request.statusText, errorHandler, {
-                            response: JSON.parse(request.responseText)
+                            response: this.safeJsonParse(request.responseText)
                         });
                     }
 
@@ -681,6 +707,7 @@ export class Http<T extends { [key: string]: any }> extends ExternalInterface<T>
             && event.newValue === null
             && event.oldValue !== null
         ) {
+            // @ts-ignore
             this.unexpectedLogoutSubject.next();
         }
     }
